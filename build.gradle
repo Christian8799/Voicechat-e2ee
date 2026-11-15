@@ -1,0 +1,54 @@
+plugins {
+    // Gleiches Loom-Plugin wie Simple Voice Chat fuer 26.x (Minecraft ist ab 26.1 nicht mehr obfuskiert)
+    id 'net.fabricmc.fabric-loom' version '1.19-SNAPSHOT'
+}
+
+version = project.mod_version
+group = 'voicechate2ee'
+
+base {
+    archivesName = 'voicechat-e2ee'
+}
+
+repositories {
+    maven { url = 'https://libraries.minecraft.net' }
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'Modrinth'
+                url = 'https://api.modrinth.com/maven'
+            }
+        }
+        filter {
+            includeGroup 'maven.modrinth'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+    // Simple Voice Chat (wird nicht mitgeliefert, nur zum Kompilieren und fuer ./gradlew runClient)
+    implementation "${project.voicechat_dependency}"
+}
+
+processResources {
+    inputs.property 'mod_version', project.mod_version
+    filesMatching('fabric.mod.json') {
+        expand 'mod_version': project.mod_version,
+                'fabric_loader_version': project.fabric_loader_version,
+                'minecraft_dependency': project.minecraft_dependency,
+                'java_version': project.java_version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = project.java_version as int
+    options.encoding = 'UTF-8'
+}
+
+java {
+    withSourcesJar()
+}
