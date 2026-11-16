@@ -13,12 +13,12 @@ import java.security.GeneralSecurityException;
 import java.util.Properties;
 
 /**
- * Haelt Einstellungen und Key. Die Datei {@code config/voicechat-e2ee.properties} wird maximal
- * einmal pro Sekunde auf Aenderungen geprueft, Key-Wechsel gelten also sofort ohne Neustart.
+ * Holds the settings and the key. The file {@code config/voicechat-e2ee.properties} is checked for changes at
+ * most once per second, so key changes take effect immediately without a restart.
  */
 public final class E2EEState {
 
-    /** Unveraenderlicher Zustand zu einem Zeitpunkt. */
+    /** Immutable state at a point in time. */
     public record Snapshot(boolean enabled, boolean requireEncryption, String keyText, VoiceKey key) {
     }
 
@@ -33,14 +33,14 @@ public final class E2EEState {
     private E2EEState() {
     }
 
-    /** Wird beim Start aufgerufen. Legt beim ersten Start die Datei mit einem frisch erzeugten Key an. */
+    /** Called on startup. On the first start, creates the file with a freshly generated key. */
     public static synchronized void init(Path configFile) {
         file = configFile;
         if (!Files.exists(configFile)) {
             try {
                 write(true, true, VoiceKey.generatePassphrase());
             } catch (IOException e) {
-                LOG.log(System.Logger.Level.ERROR, "Konnte Konfiguration nicht anlegen: " + configFile, e);
+                LOG.log(System.Logger.Level.ERROR, "Could not create the configuration: " + configFile, e);
             }
         }
         reload();
@@ -59,13 +59,13 @@ public final class E2EEState {
         return current;
     }
 
-    /** Aendert Einstellungen und speichert sie. */
+    /** Changes the settings and saves them. */
     public static synchronized void update(boolean enabled, boolean requireEncryption, String keyText) throws IOException {
         write(enabled, requireEncryption, keyText);
         reload();
     }
 
-    /** Liest die Datei sofort neu ein (fuer {@code /vckey reload}). */
+    /** Re-reads the file immediately (for {@code /vckey reload}). */
     public static synchronized void forceReload() {
         reload();
     }
@@ -77,7 +77,7 @@ public final class E2EEState {
                 reload();
             }
         } catch (IOException e) {
-            // Datei kurzzeitig nicht lesbar: alten Zustand behalten
+            // File temporarily unreadable: keep the old state
         }
     }
 
@@ -101,25 +101,29 @@ public final class E2EEState {
             current = new Snapshot(enabled, strict, keyText, key);
             lastModified = Files.getLastModifiedTime(file).toMillis();
         } catch (IOException | GeneralSecurityException | RuntimeException e) {
-            LOG.log(System.Logger.Level.WARNING, "Konfiguration konnte nicht gelesen werden, alter Zustand bleibt aktiv", e);
+            LOG.log(System.Logger.Level.WARNING, "Could not read the configuration, keeping the previous state", e);
         }
     }
 
     private static void write(boolean enabled, boolean strict, String keyText) throws IOException {
         String content = "# Voice Chat E2EE\n"
-                + "# Nur Spieler mit demselben key koennen sich gegenseitig im Voicechat hoeren.\n"
-                + "# Aenderungen an dieser Datei gelten nach spaetestens einer Sekunde, ohne Neustart.\n"
-                + "# WICHTIG: Gib den key nur an Leute weiter, die dich hoeren duerfen, und poste ihn nirgends oeffentlich.\n"
+                + "# Only players with the same key can hear each other in voice chat.\n"
+                + "# Changes to this file take effect within one second, no restart needed.\n"
+                + "# IMPORTANT: Only give the key to people who are allowed to hear you, and never post it publicly.\n"
                 + "\n"
-                + "# Verschluesselung an/aus. Aus = Voicechat verhaelt sich wie ohne diese Mod.\n"
+                + "# Encryption on/off. This controls how YOU send:\n"
+                + "# true  = your microphone is sent encrypted with the key.\n"
+                + "# false = you send unencrypted, as if this mod were not installed. You still hear players who speak\n"
+                + "#         encrypted with your key (and you also hear all unencrypted players).\n"
                 + "enabled=" + enabled + "\n"
                 + "\n"
-                + "# true: Nur Pakete mit gueltiger Verschluesselung werden abgespielt (Spieler ohne den key sind stumm).\n"
-                + "# false: Spieler ohne diese Mod bleiben zusaetzlich hoerbar (du hoerst sie unverschluesselt).\n"
+                + "# Only applies when enabled=true.\n"
+                + "# true: Only packets with valid encryption are played (players without the key are silent).\n"
+                + "# false: Players without this mod stay audible as well (you hear them unencrypted).\n"
                 + "requireEncryption=" + strict + "\n"
                 + "\n"
-                + "# Der gemeinsame Schluessel. Entweder den hier eingetragenen weitergeben oder den von\n"
-                + "# einem Freund eintragen. Ein eigenes langes Passwort ist auch moeglich.\n"
+                + "# The shared key. Either pass on the one entered here, or enter the one from\n"
+                + "# a friend. You can also use your own long passphrase.\n"
                 + "key=" + escape(keyText) + "\n";
 
         Path parent = file.toAbsolutePath().getParent();

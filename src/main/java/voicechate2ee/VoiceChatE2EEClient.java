@@ -15,8 +15,8 @@ public final class VoiceChatE2EEClient implements ClientModInitializer {
         KeyCommand.register();
 
         E2EEState.Snapshot s = E2EEState.snapshot();
-        LOG.log(System.Logger.Level.INFO, "Voice Chat E2EE geladen. Verschluesselung: "
-                + (s.enabled() ? "AN" : "AUS")
-                + (s.key() != null ? ", Key-Code " + s.key().fingerprint() : ", kein Key gesetzt"));
+        LOG.log(System.Logger.Level.INFO, "Voice Chat E2EE loaded. Encryption: "
+                + (s.enabled() ? "ON" : "OFF")
+                + (s.key() != null ? ", key code " + s.key().fingerprint() : ", no key set"));
     }
 }

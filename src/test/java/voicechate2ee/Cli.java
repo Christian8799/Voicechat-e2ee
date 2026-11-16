@@ -11,8 +11,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * Hilfsprogramm fuer Gegenpruefungen mit einer echten libopus: verschluesselt/entschluesselt alle *.bin-Dateien
- * eines Ordners. Aufruf: {@code Cli seal|open <passphrase> <eingabeordner> <ausgabeordner>}
+ * Helper program for cross-checks with a real libopus: encrypts/decrypts all *.bin files
+ * of a folder. Usage: {@code Cli seal|open <passphrase> <input folder> <output folder>}
  */
 public final class Cli {
 
@@ -37,7 +37,7 @@ public final class Cli {
                 result = sealed == null ? null : PacketCipher.open(sealed, key);
             }
             if (result == null) {
-                System.out.println("abgelehnt: " + f.getFileName());
+                System.out.println("rejected: " + f.getFileName());
                 continue;
             }
             Files.write(out.resolve(f.getFileName()), result);
