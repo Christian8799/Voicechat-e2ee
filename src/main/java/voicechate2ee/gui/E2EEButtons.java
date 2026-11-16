@@ -7,10 +7,9 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
+import org.jetbrains.annotations.Nullable;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.config.SettingsModel;
-
-import javax.annotation.Nullable;
 
 /**
  * The two buttons that are added to the Simple Voice Chat window: a quick toggle for the encryption and a
