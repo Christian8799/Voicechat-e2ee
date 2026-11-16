@@ -8,10 +8,9 @@ import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
+import org.jetbrains.annotations.Nullable;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.config.SettingsModel;
-
-import javax.annotation.Nullable;
 
 /**
  * The settings window of the mod. Everything that used to need a command or the config file can be done here:
