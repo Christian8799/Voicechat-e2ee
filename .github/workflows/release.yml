@@ -1,3 +1,4 @@
+
 name: Release
 
 on:
@@ -39,25 +40,10 @@ jobs:
         uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
 
       - name: Build release JAR
-        run: bash ./gradlew clean build -Pmod_version="${{ steps.version.outputs.version }}"
+        run: bash ./gradlew clean assemble -Pmod_version="${{ steps.version.outputs.version }}"
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Voicechat E2EE ${{ github.ref_name }}
-          generate_release_notes: true
-          files: |
-            build/libs/voicechat-e2ee-${{ steps.version.outputs.version }}.jar
-          fail_on_unmatched_files: truename: Release
-: Setup Gradle
-        uses: gradle/actions/setup-gradle@af1da67850ed9a4cedd57bfd976089dd991e2582 # v4.0.0
-
-      - name: Build release JAR
-        run: ./gradlew clean build -Pmod_version="${{ steps.version.outputs.version }}"
-
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Voicechat E2EE ${{ github.ref_name }}
