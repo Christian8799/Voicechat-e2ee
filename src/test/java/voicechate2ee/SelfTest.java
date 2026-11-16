@@ -4,6 +4,7 @@ import de.maxhenkel.voicechat.api.opus.OpusDecoder;
 import de.maxhenkel.voicechat.api.opus.OpusEncoder;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.config.EncryptedPlayers;
+import voicechate2ee.config.SettingsModel;
 import voicechate2ee.crypto.OpusEnvelope;
 import voicechate2ee.crypto.PacketCipher;
 import voicechate2ee.crypto.VoiceKey;
@@ -35,6 +36,7 @@ public final class SelfTest {
         testWrappers();
         testHearEncryptedWhenDisabled();
         testEncryptedPlayers();
+        testSettingsModel();
         System.out.println(checks + " checks, " + failures + " failed");
         System.exit(failures == 0 ? 0 : 1);
     }
@@ -286,6 +288,137 @@ public final class SelfTest {
         // A decoder without a speaker ID (null) must not break anything
         DecryptingOpusDecoder anonymous = new DecryptingOpusDecoder(new RecordingDecoder());
         check(anonymous.decode(sealed, 1).length == 1, "decoder without a speaker ID still decrypts");
+    }
+
+    /** The logic behind the settings window and the quick toggle button (everything except drawing). */
+    private static void testSettingsModel() throws Exception {
+        // normalizeKey
+        check(SettingsModel.normalizeKey(null).isEmpty(), "key: null -> empty");
+        check(SettingsModel.normalizeKey("  ABCD-EFGH  ").equals("ABCD-EFGH"), "key: surrounding spaces are removed");
+        check(SettingsModel.normalizeKey("AB\r\nCD\tEF").equals("ABCDEF"), "key: line breaks and tabs are removed (paste)");
+        check(SettingsModel.normalizeKey("my secret phrase").equals("my secret phrase"), "key: spaces inside are kept");
+        check(SettingsModel.normalizeKey("x".repeat(500)).length() == SettingsModel.MAX_KEY_LENGTH, "key: length is capped");
+        check(SettingsModel.normalizeKey(" \n ").isEmpty(), "key: only blanks -> empty");
+
+        Path dir = Files.createTempDirectory("e2ee-test-settings");
+        Path cfg = dir.resolve("voicechat-e2ee.properties");
+        E2EEState.init(cfg);
+        E2EEState.update(true, true, "GOOD-LONG-KEY-123456");
+
+        // quick toggle
+        check(SettingsModel.toggleEncryption() == SettingsModel.ToggleResult.CHANGED && !E2EEState.snapshot().enabled(),
+                "toggle: on -> off");
+        check(SettingsModel.toggleEncryption() == SettingsModel.ToggleResult.CHANGED && E2EEState.snapshot().enabled(),
+                "toggle: off -> on");
+        check(E2EEState.snapshot().keyText().equals("GOOD-LONG-KEY-123456") && E2EEState.snapshot().requireEncryption(),
+                "toggle: key and strict stay untouched");
+        SettingsModel.toggleEncryption();
+        E2EEState.forceReload();
+        check(!E2EEState.snapshot().enabled(), "toggle is saved to the file");
+        SettingsModel.toggleEncryption();
+
+        // strict
+        check(SettingsModel.setStrict(false) && !E2EEState.snapshot().requireEncryption(), "strict off");
+        check(E2EEState.snapshot().enabled(), "strict: encryption setting untouched");
+        check(SettingsModel.setStrict(true) && E2EEState.snapshot().requireEncryption(), "strict on");
+
+        // applying a key
+        E2EEState.Snapshot s = E2EEState.snapshot();
+        check(!SettingsModel.canApply(s, "GOOD-LONG-KEY-123456"), "apply: same key -> disabled");
+        check(!SettingsModel.canApply(s, "  GOOD-LONG-KEY-123456 \n"), "apply: same key with spaces -> disabled");
+        check(!SettingsModel.canApply(s, "") && !SettingsModel.canApply(s, "   "), "apply: empty -> disabled");
+        check(SettingsModel.canApply(s, "ANOTHER-LONG-KEY-9999"), "apply: new key -> enabled");
+        check(SettingsModel.keyLine(s, "ANOTHER-LONG-KEY-9999").tone() == SettingsModel.Tone.WARN
+                && SettingsModel.keyLine(s, "ANOTHER-LONG-KEY-9999").text().startsWith("Unsaved"), "typed key is marked unsaved");
+        check(SettingsModel.keyLine(s, "GOOD-LONG-KEY-123456").text().contains(s.key().fingerprint()),
+                "saved key: key code is shown");
+        check(!SettingsModel.applyKey("") && !SettingsModel.applyKey("\n") && E2EEState.snapshot().keyText().equals("GOOD-LONG-KEY-123456"),
+                "empty key is never applied");
+        String codeBefore = s.key().fingerprint();
+        check(SettingsModel.applyKey("  ANOTHER-LONG-KEY-9999 \n") && E2EEState.snapshot().keyText().equals("ANOTHER-LONG-KEY-9999"),
+                "apply: key is trimmed and saved");
+        check(!E2EEState.snapshot().key().fingerprint().equals(codeBefore), "apply: key code changes with the key");
+        E2EEState.forceReload();
+        check(E2EEState.snapshot().keyText().equals("ANOTHER-LONG-KEY-9999"), "applied key is in the file");
+        check(E2EEState.snapshot().enabled() && E2EEState.snapshot().requireEncryption(), "apply: switches untouched");
+
+        // short key warning
+        SettingsModel.applyKey("short");
+        check(SettingsModel.keyLine(E2EEState.snapshot(), "short").tone() == SettingsModel.Tone.WARN
+                && SettingsModel.keyLine(E2EEState.snapshot(), "short").text().contains("short"), "short key: warning");
+
+        // generating a key
+        E2EEState.update(false, false, E2EEState.snapshot().keyText());
+        String old = E2EEState.snapshot().keyText();
+        String generated = SettingsModel.generateKey();
+        check(generated != null && generated.matches("([A-Z2-9]{4}-){5}[A-Z2-9]{4}"), "generate: format");
+        check(generated != null && !generated.equals(old) && E2EEState.snapshot().keyText().equals(generated), "generate: new key is saved");
+        check(!E2EEState.snapshot().enabled() && !E2EEState.snapshot().requireEncryption(),
+                "generate: switches untouched (encryption stays off)");
+        check(SettingsModel.keyLine(E2EEState.snapshot(), generated).tone() == SettingsModel.Tone.NORMAL,
+                "generated key: no warning");
+
+        // without a key
+        E2EEState.update(false, true, "");
+        s = E2EEState.snapshot();
+        check(!SettingsModel.canToggleEncryption(s), "no key + off: cannot be turned on");
+        check(SettingsModel.toggleEncryption() == SettingsModel.ToggleResult.NEEDS_KEY && !E2EEState.snapshot().enabled(),
+                "no key + off: quick toggle asks for a key instead of turning on");
+        check(SettingsModel.keyLine(s, "").tone() == SettingsModel.Tone.WARN, "no key: warning line");
+        check(!SettingsModel.isSendingEncrypted(s), "no key: not sending encrypted");
+        check(SettingsModel.quickToggleTooltip(s).contains("No key"), "no key: tooltip says so");
+        E2EEState.update(true, true, "");
+        s = E2EEState.snapshot();
+        check(SettingsModel.canToggleEncryption(s) && !SettingsModel.isSendingEncrypted(s),
+                "enabled without key: can be turned off, but is not sending encrypted");
+        check(SettingsModel.sendLine(s).tone() == SettingsModel.Tone.WARN && SettingsModel.sendLine(s).text().contains("nothing"),
+                "enabled without key: warns that nothing is sent");
+        check(SettingsModel.toggleEncryption() == SettingsModel.ToggleResult.CHANGED && !E2EEState.snapshot().enabled(),
+                "enabled without key: toggle turns it off");
+
+        // texts
+        E2EEState.update(true, true, "GOOD-LONG-KEY-123456");
+        s = E2EEState.snapshot();
+        check(SettingsModel.encryptionLabel(s).endsWith("ON") && SettingsModel.strictLabel(s).endsWith("ON"), "labels: on");
+        check(SettingsModel.sendLine(s).text().equals("You send encrypted."), "send line: encrypted");
+        check(SettingsModel.quickToggleTooltip(s).startsWith("Encryption: ON"), "quick toggle tooltip: on");
+        E2EEState.update(false, false, "GOOD-LONG-KEY-123456");
+        s = E2EEState.snapshot();
+        check(SettingsModel.encryptionLabel(s).endsWith("OFF") && SettingsModel.strictLabel(s).endsWith("OFF"), "labels: off");
+        check(SettingsModel.hearLine(s).text().contains("still hear"), "hear line: off still hears players with the key");
+        check(SettingsModel.quickToggleTooltip(s).contains("turn it on"), "quick toggle tooltip: off");
+
+        // every line of text has to fit into the window. The game's font is at most 6 pixels per character wide
+        // for these texts; the window offers 228 pixels (buttons: 220, so a bit less)
+        int maxLine = 38;
+        int maxButton = 36;
+        boolean linesFit = true;
+        String[] keys = {"", "short", "GOOD-LONG-KEY-123456"};
+        for (boolean enabled : new boolean[]{true, false}) {
+            for (boolean strict : new boolean[]{true, false}) {
+                for (String key : keys) {
+                    E2EEState.update(enabled, strict, key);
+                    E2EEState.Snapshot t = E2EEState.snapshot();
+                    linesFit &= SettingsModel.sendLine(t).text().length() <= maxLine;
+                    linesFit &= SettingsModel.hearLine(t).text().length() <= maxLine;
+                    linesFit &= SettingsModel.keyLine(t, key).text().length() <= maxLine;
+                    linesFit &= SettingsModel.keyLine(t, key + "x").text().length() <= maxLine;
+                    linesFit &= SettingsModel.keyLine(t, "").text().length() <= maxLine;
+                    linesFit &= SettingsModel.encryptionLabel(t).length() <= maxButton;
+                    linesFit &= SettingsModel.strictLabel(t).length() <= maxButton;
+                }
+            }
+        }
+        for (String hint : SettingsModel.hintLines()) {
+            linesFit &= hint.length() <= maxLine;
+        }
+        // the two buttons in the key row are 117 pixels wide each, the Show/Hide button 40
+        int maxHalfButton = 17;
+        linesFit &= SettingsModel.APPLY_LABEL.length() <= maxHalfButton;
+        linesFit &= SettingsModel.GENERATE_LABEL.length() <= maxHalfButton;
+        linesFit &= SettingsModel.CONFIRM_LABEL.length() <= maxHalfButton;
+        linesFit &= SettingsModel.revealLabel(true).length() <= 5 && SettingsModel.revealLabel(false).length() <= 5;
+        check(linesFit, "all texts fit into the settings window");
     }
 
     private static boolean contains(byte[] haystack, byte[] needle) {

@@ -108,7 +108,8 @@ public final class E2EEState {
     private static void write(boolean enabled, boolean strict, String keyText) throws IOException {
         String content = "# Voice Chat E2EE\n"
                 + "# Only players with the same key can hear each other in voice chat.\n"
-                + "# Changes to this file take effect within one second, no restart needed.\n"
+                + "# You do not need to edit this file: all settings are in the game, next to the Simple Voice\n"
+                + "# Chat window (incognito buttons). If you do edit it, changes take effect within one second.\n"
                 + "# IMPORTANT: Only give the key to people who are allowed to hear you, and never post it publicly.\n"
                 + "\n"
                 + "# Encryption on/off. This controls how YOU send:\n"

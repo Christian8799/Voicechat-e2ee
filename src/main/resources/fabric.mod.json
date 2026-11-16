@@ -3,7 +3,7 @@
   "id": "voicechat_e2ee",
   "version": "${mod_version}",
   "name": "Voice Chat E2EE",
-  "description": "Encrypts Simple Voice Chat with a shared key. Only players with the same key can hear each other. Encrypted players get an incognito icon next to their skin.",
+  "description": "Encrypts Simple Voice Chat with a shared key. Only players with the same key can hear each other. Encrypted players get an incognito icon next to their skin. Everything is set in a settings window that opens from the Simple Voice Chat window.",
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
@@ -20,6 +20,7 @@
     "minecraft": "${minecraft_dependency}",
     "java": ">=${java_version}",
     "voicechat": ">=2.6.24",
-    "fabric-command-api-v2": "*"
+    "fabric-command-api-v2": "*",
+    "fabric-lifecycle-events-v1": "*"
   }
 }
