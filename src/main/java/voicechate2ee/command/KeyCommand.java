@@ -10,10 +10,11 @@ import java.io.IOException;
 import java.util.function.Consumer;
 
 /**
- * Der Client-Befehl {@code /vckey}. Er wird komplett lokal ausgefuehrt und nie an den Server geschickt.
+ * The client command {@code /vckey}. It runs entirely locally and is never sent to the server.
  *
- * <p>Absichtlich gibt es keinen Befehl, der einen Key als Argument entgegennimmt: Ein Tippfehler im Befehlsnamen
- * wuerde den Key sonst als Server-Befehl an den Server senden. Fremde Keys traegt man in die Konfigurationsdatei ein.
+ * <p>There is deliberately no command that takes a key as an argument: a typo in the command name would
+ * otherwise send the key to the server as a server command. Other people's keys are entered in the
+ * configuration file.
  */
 public final class KeyCommand {
 
@@ -62,16 +63,21 @@ public final class KeyCommand {
 
     private static void status(Consumer<Component> out) {
         E2EEState.Snapshot s = E2EEState.snapshot();
-        out.accept(Component.literal("[Voice E2EE] Verschluesselung: " + (s.enabled() ? "AN" : "AUS")));
-        if (s.key() != null) {
-            out.accept(Component.literal("[Voice E2EE] Key-Code: " + s.key().fingerprint()
-                    + " (gleicher Code = gleicher Key)"));
-        } else {
-            out.accept(Component.literal("[Voice E2EE] Es ist kein Key gesetzt. /vckey generate erzeugt einen."));
+        out.accept(Component.literal("[Voice E2EE] Encryption: " + (s.enabled() ? "ON" : "OFF")));
+        if (!s.enabled()) {
+            out.accept(Component.literal("[Voice E2EE] You are sending unencrypted. You can still hear players "
+                    + "who speak encrypted with your key."));
         }
-        out.accept(Component.literal("[Voice E2EE] Nur verschluesselte Sprecher hoeren: "
-                + (s.requireEncryption() ? "ja" : "nein")));
-        out.accept(Component.literal("[Voice E2EE] Befehle: /vckey generate | show | on | off | strict on|off | reload"));
+        if (s.key() != null) {
+            out.accept(Component.literal("[Voice E2EE] Key code: " + s.key().fingerprint()
+                    + " (same code = same key)"));
+        } else {
+            out.accept(Component.literal("[Voice E2EE] No key is set. /vckey generate creates one."));
+        }
+        out.accept(Component.literal("[Voice E2EE] Only hear encrypted speakers: "
+                + (s.requireEncryption() ? "yes" : "no")
+                + (s.enabled() ? "" : " (only applies while encryption is ON)")));
+        out.accept(Component.literal("[Voice E2EE] Commands: /vckey generate | show | on | off | strict on|off | reload"));
     }
 
     private static void generate(Consumer<Component> out) {
@@ -80,22 +86,22 @@ public final class KeyCommand {
         try {
             E2EEState.update(true, s.requireEncryption(), key);
         } catch (IOException e) {
-            out.accept(Component.literal("[Voice E2EE] Konnte den Key nicht speichern: " + e.getMessage()));
+            out.accept(Component.literal("[Voice E2EE] Could not save the key: " + e.getMessage()));
             return;
         }
-        out.accept(Component.literal("[Voice E2EE] Neuer Key erzeugt und gespeichert: " + key));
-        out.accept(Component.literal("[Voice E2EE] Schick ihn nur an Leute, die dich hoeren duerfen. "
-                + "Alle bisherigen Mitspieler brauchen jetzt den neuen Key."));
+        out.accept(Component.literal("[Voice E2EE] New key generated and saved: " + key));
+        out.accept(Component.literal("[Voice E2EE] Only send it to people who are allowed to hear you. "
+                + "Everyone you played with before now needs the new key."));
     }
 
     private static void show(Consumer<Component> out) {
         E2EEState.Snapshot s = E2EEState.snapshot();
         if (s.keyText().isEmpty()) {
-            out.accept(Component.literal("[Voice E2EE] Es ist kein Key gesetzt."));
+            out.accept(Component.literal("[Voice E2EE] No key is set."));
             return;
         }
-        out.accept(Component.literal("[Voice E2EE] Dein Key: " + s.keyText()));
-        out.accept(Component.literal("[Voice E2EE] Achtung: Nicht in Streams oder Screenshots zeigen."));
+        out.accept(Component.literal("[Voice E2EE] Your key: " + s.keyText()));
+        out.accept(Component.literal("[Voice E2EE] Warning: Do not show it on streams or in screenshots."));
     }
 
     private static void setEnabled(boolean enabled, Consumer<Component> out) {
@@ -103,7 +109,7 @@ public final class KeyCommand {
         try {
             E2EEState.update(enabled, s.requireEncryption(), s.keyText());
         } catch (IOException e) {
-            out.accept(Component.literal("[Voice E2EE] Konnte die Einstellung nicht speichern: " + e.getMessage()));
+            out.accept(Component.literal("[Voice E2EE] Could not save the setting: " + e.getMessage()));
             return;
         }
         status(out);
@@ -114,7 +120,7 @@ public final class KeyCommand {
         try {
             E2EEState.update(s.enabled(), strict, s.keyText());
         } catch (IOException e) {
-            out.accept(Component.literal("[Voice E2EE] Konnte die Einstellung nicht speichern: " + e.getMessage()));
+            out.accept(Component.literal("[Voice E2EE] Could not save the setting: " + e.getMessage()));
             return;
         }
         status(out);

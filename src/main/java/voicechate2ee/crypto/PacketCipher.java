@@ -7,11 +7,11 @@ import java.security.SecureRandom;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Verschluesselt einzelne Opus-Pakete mit AES-256-GCM.
+ * Encrypts individual Opus packets with AES-256-GCM.
  *
- * <p>Format des versiegelten Pakets: {@code [12 Byte Nonce][Chiffretext][16 Byte GCM-Tag]}.
- * Die Nonce besteht aus einer zufaelligen 4-Byte-Sitzungs-ID und einem 8-Byte-Zaehler und wiederholt
- * sich dadurch nie. Der GCM-Tag sorgt dafuer, dass falsche Keys und manipulierte Pakete erkannt werden.
+ * <p>Format of the sealed packet: {@code [12 byte nonce][ciphertext][16 byte GCM tag]}.
+ * The nonce consists of a random 4-byte session ID and an 8-byte counter, so it never repeats.
+ * The GCM tag makes sure wrong keys and tampered packets are detected.
  */
 public final class PacketCipher {
 
@@ -37,7 +37,7 @@ public final class PacketCipher {
         return out;
     }
 
-    /** Entschluesselt ein Paket; gibt {@code null} zurueck, wenn der Key falsch oder das Paket ungueltig ist. */
+    /** Decrypts a packet; returns {@code null} if the key is wrong or the packet is invalid. */
     public static byte[] open(byte[] sealed, VoiceKey key) {
         if (sealed == null || sealed.length < NONCE_LEN + TAG_BYTES + 1) {
             return null;

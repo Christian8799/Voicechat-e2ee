@@ -9,12 +9,12 @@ import java.security.GeneralSecurityException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Umhuellt den Opus-Encoder von Simple Voice Chat: Jedes kodierte Paket wird verschluesselt,
- * bevor es zum Server geht. Der Server sieht nur den Chiffretext.
+ * Wraps the Opus encoder of Simple Voice Chat: every encoded packet is encrypted
+ * before it goes to the server. The server only sees the ciphertext.
  */
 public final class EncryptingOpusEncoder implements OpusEncoder {
 
-    /** Maximale Opus-Nutzlast, die Simple Voice Chat pro Paket erlaubt. */
+    /** Maximum Opus payload that Simple Voice Chat allows per packet. */
     private static final int MAX_PAYLOAD = 1275;
     private static final byte[] EMPTY = new byte[0];
     private static final System.Logger LOG = System.getLogger("voicechat-e2ee");
@@ -36,10 +36,10 @@ public final class EncryptingOpusEncoder implements OpusEncoder {
             return opus;
         }
         if (state.key() == null) {
-            // Fail-closed: lieber nichts senden als unverschluesselt
+            // Fail-closed: better to send nothing than to send unencrypted
             if (warnedNoKey.compareAndSet(false, true)) {
                 LOG.log(System.Logger.Level.WARNING,
-                        "Verschluesselung ist aktiv, aber es ist kein key gesetzt. Mikrofon wird nicht uebertragen.");
+                        "Encryption is enabled, but no key is set. The microphone is not being transmitted.");
             }
             return EMPTY;
         }
@@ -48,13 +48,13 @@ public final class EncryptingOpusEncoder implements OpusEncoder {
             if (packet.length > MAX_PAYLOAD) {
                 if (warnedTooBig.compareAndSet(false, true)) {
                     LOG.log(System.Logger.Level.WARNING,
-                            "Verschluesseltes Paket ist zu gross (" + packet.length + " Byte), Paket verworfen.");
+                            "Encrypted packet is too large (" + packet.length + " bytes), packet dropped.");
                 }
                 return EMPTY;
             }
             return packet;
         } catch (GeneralSecurityException e) {
-            LOG.log(System.Logger.Level.ERROR, "Verschluesselung fehlgeschlagen, Paket verworfen", e);
+            LOG.log(System.Logger.Level.ERROR, "Encryption failed, packet dropped", e);
             return EMPTY;
         }
     }

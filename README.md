@@ -1,148 +1,124 @@
 # Voice Chat E2EE (Fabric, Minecraft 26.3)
 
-A client-side mod for [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) that encrypts voice chat using a shared **key**. Only players who have entered the same key can hear each other. The server (including its admins) only sees ciphertext.
+A client-side mod for [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) that encrypts
+voice chat with a shared **key**. Only players who have entered the same key can hear each other.
+The server (and its admin) only sees ciphertext.
 
-The mod runs **entirely client-side**. The server only needs Simple Voice Chat, just as before.
+The mod runs **on the client only**. The server only needs Simple Voice Chat, just like before.
 
 ## Requirements
 
 - Minecraft 26.3 with Fabric Loader (0.19.3 or newer) and Fabric API
-- Simple Voice Chat 2.6.24 or newer (Fabric) on both the client and server
-- Everyone who wants to communicate must have this mod installed and use the same key
+- Simple Voice Chat 2.6.24 or newer (Fabric) on client and server
+- Everyone who should hear each other needs this mod and the same key
 
 ## Usage
 
-1. Place the JAR file in your `mods` folder and launch Minecraft. On the first launch, the file `config/voicechat-e2ee.properties` will be created with a randomly generated key.
-2. View your key: run `/vckey show` in-game or open the configuration file (look for the `key=...` line).
-3. Share the key with your friends (preferably through a private channel, not publicly).
-4. Your friends must enter the key in the `key=` field of their own configuration file and save it. The change takes effect within one second at most, without requiring a restart.
-5. Verify that the keys match: `/vckey` displays a key code (e.g. `A1B2-C3D4`). If the codes match, the keys are identical.
+1. Put the jar in the `mods` folder and start Minecraft. On the first start, the file
+   `config/voicechat-e2ee.properties` is created with a random key.
+2. Show your key: in game `/vckey show`, or open the file (line `key=...`).
+3. Send the key to your friends (preferably over a private channel, not publicly).
+4. Your friends enter it in the same file after `key=` and save. It takes effect within
+   one second at the latest, without a restart.
+5. Comparison: `/vckey` shows a key code (e.g. `A1B2-C3D4`). Same code means same key.
 
-Anyone who does not have the key cannot hear you, and you cannot hear them either (by default).
+Anyone who does not have the key cannot hear you, and you cannot hear them (default).
 
-| Command | Description |
+## Encryption on/off
+
+`/vckey on` / `off` controls **how you send**:
+
+| | You send | You hear |
+| --- | --- | --- |
+| **ON** (default) | encrypted | players with your key. With `strict off`, also players without the mod |
+| **OFF** | unencrypted, as if this mod were not installed | players with your key (encrypted) **and** all unencrypted players |
+
+Even with encryption switched off, you still hear everyone who speaks encrypted with your key.
+They just cannot hear you while they have `strict` on, because you are sending unencrypted.
+`strict` only applies while encryption is switched on.
+
+## Incognito icon
+
+A small incognito icon (hat with glasses) shows who is encrypted. It appears next to the skin of
+**yourself** (as long as you send encrypted) and of **every player who speaks encrypted with your
+key**, in these places in Simple Voice Chat:
+
+- **Group display in the HUD** (the heads at the edge of the screen): at the head
+- **Group window** (member list): after the name
+- **Volume window** (player list): in the corner of the skin
+- **Join group window** (list with the heads of the members): at the head
+
+When the icon appears:
+
+- For other players, as soon as you have **decrypted a packet from them with your key**, that is, after
+  they have spoken for the first time. It stays even if they are silent.
+- It disappears when the player speaks unencrypted or with a different key again, when you change
+  your key, and when you switch servers.
+- Players with a **different** key get no icon, because you cannot hear them.
+- Without a key of your own there are no icons.
+
+| Command | Effect |
 | --- | --- |
-| `/vckey` | Displays the current status and key code |
-| `/vckey generate` | Generates and saves a new random key (everyone must then update theirs) |
-| `/vckey show` | Displays your key in the chat |
-| `/vckey on` / `off` | Enables or disables encryption |
-| `/vckey strict on` / `off` | On: only encrypted speakers are played. Off: players without the mod remain audible as well |
-| `/vckey reload` | Immediately reloads the configuration file |
+| `/vckey` | status, key code |
+| `/vckey generate` | generate and save a new random key (everyone then needs the new one) |
+| `/vckey show` | show your own key in chat |
+| `/vckey on` / `off` | encryption on/off (controls how you send, see above) |
+| `/vckey strict on` / `off` | on: only encrypted speakers are played. off: players without the mod stay audible as well |
+| `/vckey reload` | re-read the config file immediately |
 
-There is intentionally no command that accepts a key as an argument. Otherwise, a typo in the command name could accidentally send the key to the server as a server command. Other people's keys must be entered directly into the configuration file.
+There is deliberately no command that takes a key as an argument. A typo in the command name would
+otherwise send the key to the server as a server command. You enter other people's keys in the file.
 
-## Building from Source
+## Building it yourself
 
-Install JDK 25, then run the following command in the project directory:
+Install JDK 25, then in the project folder:
 
-```bash
+```
 ./gradlew build          (Windows: gradlew.bat build)
 ```
 
-The compiled JAR file will be located at `build/libs/voicechat-e2ee-1.0.0.jar`.
+The finished file is in `build/libs/voicechat-e2ee-1.1.0.jar`. To test with a development client:
+`./gradlew runClient`.
 
-To test it using the development client, run:
+## How it works
 
-```bash
-./gradlew runClient
-```
-
-## How It Works
-
-- The mod uses Mixins to hook into Simple Voice Chat's Opus encoder (`MicThread`) and Opus decoder (`AudioChannel`). Every encoded audio packet is encrypted using AES-256-GCM before being sent and decrypted after reception, before playback.
-- The AES key is derived from the shared key using PBKDF2-HMAC-SHA256 (150,000 iterations).
-- GCM detects incorrect keys and tampered packets. Such packets are discarded.
-- The ciphertext is embedded in the padding of a valid, empty Opus packet. Players without the mod therefore hear silence instead of noise. This has been tested with the actual libopus implementation.
+- The mod hooks into the Opus encoder (`MicThread`) and the Opus decoders (`AudioChannel`) of
+  Simple Voice Chat via mixins. Every encoded audio packet is encrypted with AES-256-GCM before it is
+  sent, and decrypted after it is received, before it is played. Decryption always happens as soon as a
+  key is set, even with encryption switched off.
+- While decrypting, the mod remembers which player (audio channel ID = player UUID) speaks encrypted.
+  That is where the incognito icon comes from. It needs no mod on the server and does not send anything
+  extra.
+- The icon is drawn into the Simple Voice Chat UI via mixins (`GroupChatManager`, `GroupEntry`,
+  `JoinGroupEntry`, `PlayerVolumeEntry`) and is generated from rectangles, without a texture.
+- The AES key is derived from the key via PBKDF2-HMAC-SHA256 (150,000 rounds).
+- GCM detects wrong keys and tampered packets. Such packets are dropped.
+- The ciphertext is hidden in the padding of a valid, empty Opus packet. Players without the mod
+  therefore hear silence instead of noise. Verified with the real libopus.
 
 ## Limitations
 
-- **Metadata is still visible:** The server can see who is speaking, when they are speaking, and the size of the packets. The audio content is encrypted, but the fact that someone is speaking is not hidden.
-- **The key is only as secure as the way you share it.** Anyone who has the key can listen in. If you suspect it has been compromised, run `/vckey generate` and distribute the new key.
-- **Brief audio echo for players without the mod:** If a player without the mod was just hearing actual audio, they may still hear approximately 60 ms of residual audio after switching. After that, they will hear silence.
-- **Server plugins that process audio** (radio, recording, voice filters) will only see ciphertext and will not work with encrypted speakers. Proximity chat, groups, and whispering will continue to work.
-- **Replay attacks:** A server admin could resend previously recorded packets (replay). However, they cannot read or modify them.
-- **Mixins accessing internal fields:** The mod accesses private fields in Simple Voice Chat (`MicThread.encoder`, `AudioChannel.decoder`). Major Simple Voice Chat updates may require adjustments to the mod.
+- **Metadata is visible:** The server sees who speaks when and how large the packets are.
+  The content is encrypted, not the fact that someone is speaking.
+- **The key is only as safe as the way you hand it out.** Anyone with the key hears everything.
+  If in doubt, run `/vckey generate` and distribute the new key.
+- **Short echo for players without the mod:** If a player without the mod has just heard real audio,
+  they may still hear about 60 ms of reverb after switching, then silence.
+- **Server plugins that process audio** (radio, recording, voice filters) only see ciphertext and
+  do not work with encrypted speakers. Proximity, groups and whispering keep working.
+- **Replay:** A server admin could resend recorded packets (replay). They cannot read or modify
+  them.
+- **Mixins on internals:** The mod accesses private fields of Simple Voice Chat (`MicThread.encoder`,
+  `AudioChannel.decoder`, `AudioChannel.uuid`, `AudioChannel.client`). After major updates of Simple
+  Voice Chat, adjustments may be necessary.
+- **The icon is display only:** The icon mixins (`voicechat_e2ee.ui.mixins.json`) are deliberately
+  optional. If a spot no longer fits after a Simple Voice Chat update, only the icon is missing there
+  (an entry in the log), the game still starts and encryption keeps working.
+- **Icon only after the first speech:** Whether another player is encrypted can only be seen from
+  their voice packets. Someone who has never spoken has no icon yet.
 
-## Self-Test
+## Self-test
 
-`src/test/java/voicechate2ee/SelfTest.java` tests encryption, packet formatting, configuration, and encoder/decoder wrappers without requiring Minecraft (48 tests).
-
-German:
-# Voice Chat E2EE (Fabric, Minecraft 26.3)
-
-Eine Client-Mod für [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat), die den Voicechat
-mit einem gemeinsamen **Key** verschlüsselt. Nur Spieler, die denselben Key eingetragen haben, können sich
-hören. Der Server (und dessen Admin) sieht nur Chiffretext.
-
-Die Mod läuft **nur auf dem Client**. Der Server braucht nur Simple Voice Chat, so wie bisher.
-
-## Voraussetzungen
-
-- Minecraft 26.3 mit Fabric Loader (0.19.3 oder neuer) und Fabric API
-- Simple Voice Chat 2.6.24 oder neuer (Fabric) auf Client und Server
-- Alle, die sich hören sollen, brauchen diese Mod und denselben Key
-
-## Benutzung
-
-1. Jar in den `mods`-Ordner legen und Minecraft starten. Beim ersten Start wird die Datei
-   `config/voicechat-e2ee.properties` mit einem zufälligen Key angelegt.
-2. Key anzeigen: im Spiel `/vckey show` oder die Datei öffnen (Zeile `key=...`).
-3. Key an deine Freunde schicken (am besten über einen privaten Kanal, nicht öffentlich).
-4. Freunde tragen ihn bei sich in dieselbe Datei hinter `key=` ein und speichern. Das gilt nach
-   spätestens einer Sekunde, ohne Neustart.
-5. Abgleich: `/vckey` zeigt einen Key-Code (z. B. `A1B2-C3D4`). Gleicher Code heißt gleicher Key.
-
-Wer den Key nicht hat, hört dich nicht, und du hörst ihn auch nicht (Standard).
-
-| Befehl | Wirkung |
-| --- | --- |
-| `/vckey` | Status, Key-Code |
-| `/vckey generate` | neuen zufälligen Key erzeugen und speichern (alle brauchen dann den neuen) |
-| `/vckey show` | eigenen Key im Chat anzeigen |
-| `/vckey on` / `off` | Verschlüsselung an/aus |
-| `/vckey strict on` / `off` | an: nur verschlüsselte Sprecher werden abgespielt. aus: Spieler ohne Mod bleiben zusätzlich hörbar |
-| `/vckey reload` | Konfigdatei sofort neu einlesen |
-
-Es gibt absichtlich keinen Befehl, der einen Key als Argument annimmt. Ein Tippfehler im Befehlsnamen
-würde den Key sonst als Server-Befehl an den Server schicken. Fremde Keys trägst du in die Datei ein.
-
-## Selbst bauen
-
-JDK 25 installieren, dann im Projektordner:
-
-```
-./gradlew build          (Windows: gradlew.bat build)
-```
-
-Die fertige Datei liegt in `build/libs/voicechat-e2ee-1.0.0.jar`. Zum Testen mit Entwicklungsclient:
-`./gradlew runClient`.
-
-## Wie es funktioniert
-
-- Die Mod hängt sich per Mixin in den Opus-Encoder (`MicThread`) und die Opus-Decoder (`AudioChannel`)
-  von Simple Voice Chat ein. Jedes kodierte Audiopaket wird mit AES-256-GCM verschlüsselt, bevor es
-  gesendet wird, und nach dem Empfang entschlüsselt, bevor es abgespielt wird.
-- Der AES-Schlüssel wird aus dem Key per PBKDF2-HMAC-SHA256 (150.000 Runden) abgeleitet.
-- GCM erkennt falsche Keys und manipulierte Pakete. Solche Pakete werden verworfen.
-- Der Chiffretext steckt im Padding eines gültigen, leeren Opus-Pakets. Spieler ohne Mod hören dadurch
-  Stille statt Rauschen. Geprüft mit der echten libopus.
-
-## Grenzen
-
-- **Metadaten sind sichtbar:** Der Server sieht, wer wann spricht und wie groß die Pakete sind.
-  Verschlüsselt ist der Inhalt, nicht die Tatsache, dass gesprochen wird.
-- **Der Key schützt nur so gut, wie du ihn weitergibst.** Wer den Key hat, hört alles mit.
-  Bei Verdacht `/vckey generate` und neu verteilen.
-- **Kurzes Echo bei Spielern ohne Mod:** Hat ein Spieler ohne Mod gerade echtes Audio gehört, kann er
-  nach dem Umschalten noch etwa 60 ms Nachhall hören, danach Stille.
-- **Server-Plugins, die Audio verarbeiten** (Radio, Aufnahme, Sprachfilter), sehen nur Chiffretext und
-  funktionieren mit verschlüsselten Sprechern nicht. Nähe, Gruppen und Flüstern funktionieren weiter.
-- **Wiederholung:** Ein Server-Admin könnte aufgezeichnete Pakete erneut senden (Replay). Er kann sie
-  nicht lesen oder ändern.
-- **Mixin auf Interna:** Die Mod greift auf private Felder von Simple Voice Chat zu (`MicThread.encoder`,
-  `AudioChannel.decoder`). Nach größeren Updates von Simple Voice Chat kann ein Anpassen nötig sein.
-
-## Selbsttest
-
-`src/test/java/voicechate2ee/SelfTest.java` prüft Verschlüsselung, Paketformat, Konfiguration und die
-Encoder/Decoder-Hüllen ohne Minecraft (48 Prüfungen).
+`src/test/java/voicechate2ee/SelfTest.java` checks encryption, packet format, configuration, the
+encoder/decoder wrappers, hearing with encryption switched off, and the detection of encrypted
+players, all without Minecraft (76 checks).

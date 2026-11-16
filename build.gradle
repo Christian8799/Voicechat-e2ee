@@ -1,5 +1,5 @@
 plugins {
-    // Gleiches Loom-Plugin wie Simple Voice Chat fuer 26.x (Minecraft ist ab 26.1 nicht mehr obfuskiert)
+    // Same Loom plugin as Simple Voice Chat uses for 26.x (Minecraft is no longer obfuscated as of 26.1)
     id 'net.fabricmc.fabric-loom' version '1.19-SNAPSHOT'
 }
 
@@ -30,7 +30,7 @@ dependencies {
     implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-    // Simple Voice Chat (wird nicht mitgeliefert, nur zum Kompilieren und fuer ./gradlew runClient)
+    // Simple Voice Chat (not bundled, only used for compiling and for ./gradlew runClient)
     implementation "${project.voicechat_dependency}"
 }
 

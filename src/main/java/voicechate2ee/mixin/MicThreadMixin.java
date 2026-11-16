@@ -12,8 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import voicechate2ee.opus.EncryptingOpusEncoder;
 
 /**
- * Haengt die Verschluesselung in den Sendeweg von Simple Voice Chat ein: Der Opus-Encoder des Mikrofon-Threads
- * wird durch einen Encoder ersetzt, der jedes Paket verschluesselt, bevor es zum Server geht.
+ * Hooks the encryption into the send path of Simple Voice Chat: the Opus encoder of the microphone thread
+ * is replaced by an encoder that encrypts every packet before it goes to the server.
  */
 @Mixin(value = MicThread.class, remap = false)
 public abstract class MicThreadMixin {

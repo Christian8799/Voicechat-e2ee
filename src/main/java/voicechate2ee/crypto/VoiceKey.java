@@ -10,15 +10,15 @@ import java.security.MessageDigest;
 import java.security.SecureRandom;
 
 /**
- * Ein AES-256-Schluessel, der aus einer gemeinsamen Passphrase (dem "Key", den du
- * deinen Freunden schickst) abgeleitet wird.
+ * An AES-256 key derived from a shared passphrase (the "key" you send to
+ * your friends).
  */
 public final class VoiceKey {
 
     private static final byte[] SALT = "voicechat-e2ee/v1/key".getBytes(StandardCharsets.UTF_8);
     private static final byte[] FINGERPRINT_TAG = "voicechat-e2ee/v1/fingerprint".getBytes(StandardCharsets.UTF_8);
     private static final int ITERATIONS = 150_000;
-    // 32 Zeichen ohne verwechselbare (0/O, 1/I) -> 5 Bit pro Zeichen
+    // 32 characters without easily confused ones (0/O, 1/I) -> 5 bits per character
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
     private final SecretKey aesKey;
@@ -33,7 +33,7 @@ public final class VoiceKey {
         this.fingerprint = String.format("%02X%02X-%02X%02X", d[0], d[1], d[2], d[3]);
     }
 
-    /** Leitet den Schluessel aus der Passphrase ab (PBKDF2-HMAC-SHA256, bewusst langsam). */
+    /** Derives the key from the passphrase (PBKDF2-HMAC-SHA256, deliberately slow). */
     public static VoiceKey fromPassphrase(String passphrase) throws GeneralSecurityException {
         PBEKeySpec spec = new PBEKeySpec(passphrase.toCharArray(), SALT, ITERATIONS, 256);
         try {
@@ -44,7 +44,7 @@ public final class VoiceKey {
         }
     }
 
-    /** Erzeugt einen neuen zufaelligen Key, z. B. K7QW-M3HD-9XTA-PB2F-ZR4N-C8VE (120 Bit). */
+    /** Generates a new random key, e.g. K7QW-M3HD-9XTA-PB2F-ZR4N-C8VE (120 bits). */
     public static String generatePassphrase() {
         SecureRandom rnd = new SecureRandom();
         StringBuilder sb = new StringBuilder();
@@ -62,8 +62,8 @@ public final class VoiceKey {
     }
 
     /**
-     * Kurzer Abgleich-Code (z. B. A1B2-C3D4). Zwei Leute mit demselben Key sehen denselben Code,
-     * verraten damit aber den Key nicht.
+     * Short comparison code (e.g. A1B2-C3D4). Two people with the same key see the same code,
+     * but it does not reveal the key.
      */
     public String fingerprint() {
         return fingerprint;

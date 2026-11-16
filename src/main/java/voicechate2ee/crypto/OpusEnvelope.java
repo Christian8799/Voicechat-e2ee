@@ -4,14 +4,13 @@ import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 
 /**
- * Versteckt die verschluesselten Daten im Padding eines gueltigen (leeren) Opus-Pakets.
+ * Hides the encrypted data in the padding of a valid (empty) Opus packet.
  *
- * <p>Warum? Spieler ohne diese Mod wuerden den Chiffretext sonst als Opus-Audio dekodieren und
- * Rauschen hoeren. Opus ignoriert die Inhalte von Padding-Bytes (RFC 6716, Abschnitt 3.2.5). Ein Client
- * ohne Mod sieht hier also ein Paket mit einem leeren Frame und gibt Stille aus, waehrend die Mod
- * die Nutzdaten aus dem Padding zieht.
+ * <p>Why? Players without this mod would otherwise decode the ciphertext as Opus audio and hear noise.
+ * Opus ignores the contents of padding bytes (RFC 6716, section 3.2.5). A client without the mod therefore
+ * sees a packet with an empty frame and plays silence, while the mod extracts the payload from the padding.
  *
- * <p>Aufbau: {@code TOC(0xFB: CELT 20ms, Code 3) | 0x41 (CBR, Padding, 1 Frame) | Paddinglaenge | Padding}.
+ * <p>Layout: {@code TOC(0xFB: CELT 20 ms, code 3) | 0x41 (CBR, padding, 1 frame) | padding length | padding}.
  */
 public final class OpusEnvelope {
 
@@ -26,7 +25,7 @@ public final class OpusEnvelope {
         out.write(TOC);
         out.write(FRAME_COUNT_BYTE);
         int remaining = payload.length;
-        // Jedes 255-Byte steht fuer 254 Padding-Bytes plus ein weiteres Laengenbyte
+        // Each 255 byte stands for 254 padding bytes plus one more length byte
         while (remaining > 254) {
             out.write(255);
             remaining -= 254;
@@ -36,7 +35,7 @@ public final class OpusEnvelope {
         return out.toByteArray();
     }
 
-    /** Gibt die versteckten Nutzdaten zurueck oder {@code null}, wenn das Paket nicht von dieser Mod stammt. */
+    /** Returns the hidden payload, or {@code null} if the packet does not come from this mod. */
     public static byte[] unwrap(byte[] packet) {
         if (packet == null || packet.length < 3
                 || (packet[0] & 0xFF) != TOC || (packet[1] & 0xFF) != FRAME_COUNT_BYTE) {
@@ -56,7 +55,7 @@ public final class OpusEnvelope {
                 break;
             }
         }
-        // Der Frame selbst muss leer sein: danach folgt nur noch das Padding
+        // The frame itself must be empty: only the padding may follow
         if (padding != packet.length - i) {
             return null;
         }
