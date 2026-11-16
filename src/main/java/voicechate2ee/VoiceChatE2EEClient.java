@@ -4,6 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import voicechate2ee.command.KeyCommand;
 import voicechate2ee.config.E2EEState;
+import voicechate2ee.gui.ScreenOpener;
 
 public final class VoiceChatE2EEClient implements ClientModInitializer {
 
@@ -13,6 +14,7 @@ public final class VoiceChatE2EEClient implements ClientModInitializer {
     public void onInitializeClient() {
         E2EEState.init(FabricLoader.getInstance().getConfigDir().resolve("voicechat-e2ee.properties"));
         KeyCommand.register();
+        ScreenOpener.register();
 
         E2EEState.Snapshot s = E2EEState.snapshot();
         LOG.log(System.Logger.Level.INFO, "Voice Chat E2EE loaded. Encryption: "

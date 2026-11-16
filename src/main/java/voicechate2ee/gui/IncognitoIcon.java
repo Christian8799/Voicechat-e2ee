@@ -16,6 +16,11 @@ public final class IncognitoIcon {
 
     private static final int CHIP = 0xFF1F1F1F;
     private static final int WHITE = 0xFFFFFFFF;
+    // look while encryption is switched off
+    private static final int CHIP_OFF = 0xFF454545;
+    private static final int WHITE_OFF = 0xFFAFAFAF;
+    private static final int SLASH = 0xFFE5322D;
+    private static final int SLASH_OUTLINE = 0xFF3A0A0A;
 
     /** {@code T} = transparent, {@code #} = dark background, {@code W} = white (hat and glasses lenses). */
     private static final String[] BITMAP = {
@@ -36,6 +41,16 @@ public final class IncognitoIcon {
      * {@code guiGraphics}, {@code size} units wide.
      */
     public static void draw(GuiGraphicsExtractor guiGraphics, float x, float y, float size) {
+        draw(guiGraphics, x, y, size, true);
+    }
+
+    /**
+     * Like {@link #draw(GuiGraphicsExtractor, float, float, float)}. With {@code active == false} the icon is
+     * grayed out and crossed out (encryption is switched off).
+     */
+    public static void draw(GuiGraphicsExtractor guiGraphics, float x, float y, float size, boolean active) {
+        int chip = active ? CHIP : CHIP_OFF;
+        int white = active ? WHITE : WHITE_OFF;
         guiGraphics.pose().pushMatrix();
         guiGraphics.pose().translate(x, y);
         float scale = size / GRID;
@@ -53,7 +68,18 @@ public final class IncognitoIcon {
                 while (col < GRID && line.charAt(col) == c) {
                     col++;
                 }
-                guiGraphics.fill(start, row, col, row + 1, c == 'W' ? WHITE : CHIP);
+                guiGraphics.fill(start, row, col, row + 1, c == 'W' ? white : chip);
+            }
+        }
+        if (!active) {
+            // diagonal from the bottom left to the top right, with a dark outline
+            for (int i = 0; i < GRID; i++) {
+                int row = GRID - 1 - i;
+                guiGraphics.fill(Math.max(0, i - 1), row, i, row + 1, SLASH_OUTLINE);
+                guiGraphics.fill(i + 1, row, Math.min(GRID, i + 2), row + 1, SLASH_OUTLINE);
+            }
+            for (int i = 0; i < GRID; i++) {
+                guiGraphics.fill(i, GRID - 1 - i, i + 1, GRID - i, SLASH);
             }
         }
         guiGraphics.pose().popMatrix();

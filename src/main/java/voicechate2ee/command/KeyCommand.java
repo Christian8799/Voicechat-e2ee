@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.minecraft.network.chat.Component;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.crypto.VoiceKey;
+import voicechate2ee.gui.ScreenOpener;
 
 import java.io.IOException;
 import java.util.function.Consumer;
@@ -12,9 +13,11 @@ import java.util.function.Consumer;
 /**
  * The client command {@code /vckey}. It runs entirely locally and is never sent to the server.
  *
+ * <p>Nothing here is needed any more: all settings are in the GUI (the incognito buttons next to the Simple Voice
+ * Chat window, or {@code /vckey gui} if those are missing). The commands stay as a shortcut.
+ *
  * <p>There is deliberately no command that takes a key as an argument: a typo in the command name would
- * otherwise send the key to the server as a server command. Other people's keys are entered in the
- * configuration file.
+ * otherwise send the key to the server as a server command. Keys are entered in the settings window.
  */
 public final class KeyCommand {
 
@@ -53,6 +56,10 @@ public final class KeyCommand {
                                     setStrict(false, msg -> ctx.getSource().sendFeedback(msg));
                                     return 1;
                                 })))
+                        .then(ClientCommands.literal("gui").executes(ctx -> {
+                            ScreenOpener.request();
+                            return 1;
+                        }))
                         .then(ClientCommands.literal("reload").executes(ctx -> {
                             E2EEState.forceReload();
                             status(msg -> ctx.getSource().sendFeedback(msg));
@@ -77,7 +84,8 @@ public final class KeyCommand {
         out.accept(Component.literal("[Voice E2EE] Only hear encrypted speakers: "
                 + (s.requireEncryption() ? "yes" : "no")
                 + (s.enabled() ? "" : " (only applies while encryption is ON)")));
-        out.accept(Component.literal("[Voice E2EE] Commands: /vckey generate | show | on | off | strict on|off | reload"));
+        out.accept(Component.literal("[Voice E2EE] Everything is also in the settings window: /vckey gui, "
+                + "or the incognito buttons next to the Simple Voice Chat window."));
     }
 
     private static void generate(Consumer<Component> out) {
