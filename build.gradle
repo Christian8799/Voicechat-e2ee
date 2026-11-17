@@ -1,6 +1,6 @@
 plugins {
     // Same Loom plugin as Simple Voice Chat uses for 26.x (Minecraft is no longer obfuscated as of 26.1)
-    id 'net.fabricmc.fabric-loom' version '1.19-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.19.4'
 }
 
 version = project.mod_version
