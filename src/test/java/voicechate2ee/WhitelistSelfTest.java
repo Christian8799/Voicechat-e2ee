@@ -98,6 +98,8 @@ public final class WhitelistSelfTest {
         }
         check(ChatCodec.fromText("abc") == null, "characters outside the alphabet are rejected");
         check(ChatCodec.fromText("\u8E00") == null && ChatCodec.fromText("\u4DFF") == null, "alphabet borders are exact");
+        List<String> wideId = ChatCodec.encode(new byte[]{1, 2, 3}, 0xABCD, 32);
+        check(ChatCodec.decodeFragment(wideId.getFirst()).messageId() == 0xABCD, "fragment IDs preserve all 16 bits");
         check(ChatCodec.fromText("\u4E00\u8DFF") != null, "first and last character of the alphabet are accepted");
 
         // Every whisper fits into a chat command, for every possible name length, and reassembles in any order
@@ -253,11 +255,18 @@ public final class WhitelistSelfTest {
         check(ReceivedKeys.open(alice, WhitelistCipher.seal(plain, key, 1, 299L, alice)) != null, "within the window: accepted");
         check(!ReceivedKeys.put(alice, 1, random(32), 0L), "a grant for an epoch we have is ignored");
         check(ReceivedKeys.open(alice, p300) == null, "...so it cannot reset the replay protection");
-        check(ReceivedKeys.put(alice, 2, random(32), 0L) && ReceivedKeys.put(alice, 3, random(32), 0L), "newer epochs are added");
+        byte[] key2 = random(32);
+        byte[] key3 = random(32);
+        check(ReceivedKeys.put(alice, 2, key2, 0L) && ReceivedKeys.put(alice, 3, key3, 0L), "newer epochs are added");
         check(ReceivedKeys.open(alice, WhitelistCipher.seal(plain, key, 1, 400L, alice)) == null, "only the last two epochs are kept");
+        check(!ReceivedKeys.put(alice, 1, key, 100L), "an evicted old epoch cannot be reinstalled by replaying its grant");
+        byte[] p3 = WhitelistCipher.seal(plain, key3, 3, 0L, alice);
+        check(ReceivedKeys.open(alice, p3) != null, "latest epoch packet is accepted");
         check(ReceivedKeys.open(UUID.randomUUID(), p101) == null && ReceivedKeys.open(null, p101) == null, "unknown speaker");
         ReceivedKeys.forget(alice);
-        check(!ReceivedKeys.has(alice), "forget removes the keys");
+        check(!ReceivedKeys.has(alice), "forget removes the active keys");
+        check(ReceivedKeys.put(alice, 3, key3, 0L), "re-adding a player accepts their current epoch");
+        check(ReceivedKeys.open(alice, p3) == null, "re-adding a player does not reset its replay window");
     }
 
     // ---------------------------------------------------------------- whitelist file
