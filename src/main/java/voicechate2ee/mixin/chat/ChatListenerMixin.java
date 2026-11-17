@@ -30,8 +30,11 @@ public abstract class ChatListenerMixin {
     private void voicechatE2ee$takeKeyMessages(ChatType.Bound boundChatType, PlayerChatMessage message, Component decoratedMessage,
                                                GameProfile sender, boolean onlyShowSecure, Instant received,
                                                CallbackInfoReturnable<Boolean> cir) {
-        // Only consume incoming private whispers. A public chat message containing our marker must remain visible.
-        if (!boundChatType.chatType().is(ChatType.MSG_COMMAND_INCOMING)) {
+        // Incoming whispers carry protocol messages from other players. Outgoing whispers may be echoed
+        // back by the server with MSG_COMMAND_OUTGOING; hide our own protocol echo too, but never process it.
+        boolean incoming = boundChatType.chatType().is(ChatType.MSG_COMMAND_INCOMING);
+        boolean outgoing = boundChatType.chatType().is(ChatType.MSG_COMMAND_OUTGOING);
+        if (!incoming && !outgoing) {
             return;
         }
         String content = message.signedContent();
@@ -43,8 +46,8 @@ public abstract class ChatListenerMixin {
             return;
         }
         UUID self = WhitelistState.selfId();
-        if (sender.id().equals(self)) {
-            // the server echoing our own whisper back to us
+        if (outgoing || sender.id().equals(self)) {
+            // The sender-side echo is only hidden. Never feed it to the grant receiver.
             cir.setReturnValue(false);
             return;
         }
