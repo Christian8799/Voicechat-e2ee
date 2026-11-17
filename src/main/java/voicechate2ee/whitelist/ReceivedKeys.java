@@ -26,10 +26,10 @@ public final class ReceivedKeys {
         private final byte[] key;
         private final ReplayWindow window;
 
-        Entry(int epoch, byte[] key, long firstCounter) {
+        Entry(int epoch, byte[] key, ReplayWindow window) {
             this.epoch = epoch;
             this.key = key;
-            this.window = new ReplayWindow(firstCounter);
+            this.window = window;
         }
 
         public int epoch() {
@@ -40,6 +40,8 @@ public final class ReceivedKeys {
     private static final Map<UUID, List<Entry>> KEYS = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> MISSING = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Integer>> SEEN_EPOCHS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Set<Integer>> FORGOTTEN_EPOCHS = new ConcurrentHashMap<>();
+    private static final Map<UUID, Map<Integer, ReplayWindow>> REPLAY_HISTORY = new ConcurrentHashMap<>();
 
     private ReceivedKeys() {
     }
@@ -57,18 +59,35 @@ public final class ReceivedKeys {
             return false;
         }
         Set<Integer> seen = SEEN_EPOCHS.computeIfAbsent(speaker, ignored -> ConcurrentHashMap.newKeySet());
+        Set<Integer> forgotten = FORGOTTEN_EPOCHS.computeIfAbsent(speaker, ignored -> ConcurrentHashMap.newKeySet());
+        Map<Integer, ReplayWindow> history = REPLAY_HISTORY.computeIfAbsent(speaker, ignored -> new ConcurrentHashMap<>());
         synchronized (seen) {
-            // Do not reinstall an epoch after it has fallen out of the two-key decryption window.
-            if (seen.contains(epoch) || seen.size() >= MAX_SEEN_EPOCHS_PER_SPEAKER) {
-                return false;
+            ReplayWindow window;
+            if (seen.contains(epoch)) {
+                // A grant for an evicted epoch is a rollback. Re-adding a player is different:
+                // keep that epoch's replay window so a previously captured packet stays rejected.
+                if (!forgotten.remove(epoch)) {
+                    return false;
+                }
+                window = history.get(epoch);
+                if (window == null) {
+                    return false;
+                }
+            } else {
+                if (seen.size() >= MAX_SEEN_EPOCHS_PER_SPEAKER) {
+                    return false;
+                }
+                window = new ReplayWindow(firstCounter);
+                seen.add(epoch);
+                history.put(epoch, window);
             }
-            seen.add(epoch);
+            ReplayWindow acceptedWindow = window;
             KEYS.compute(speaker, (id, list) -> {
                 List<Entry> next = new CopyOnWriteArrayList<>();
                 if (list != null) {
                     next.addAll(list);
                 }
-                next.add(new Entry(epoch, key.clone(), firstCounter));
+                next.add(new Entry(epoch, key.clone(), acceptedWindow));
                 while (next.size() > KEEP_EPOCHS) {
                     next.remove(0);
                 }
@@ -78,22 +97,28 @@ public final class ReceivedKeys {
         MISSING.remove(speaker);
         return true;
     }
-
     public static boolean has(UUID speaker) {
         List<Entry> list = KEYS.get(speaker);
         return list != null && !list.isEmpty();
     }
 
     public static void forget(UUID speaker) {
-        KEYS.remove(speaker);
+        List<Entry> removed = KEYS.remove(speaker);
+        if (removed != null && !removed.isEmpty()) {
+            Set<Integer> forgotten = FORGOTTEN_EPOCHS.computeIfAbsent(speaker, ignored -> ConcurrentHashMap.newKeySet());
+            for (Entry entry : removed) {
+                forgotten.add(entry.epoch);
+            }
+        }
         MISSING.remove(speaker);
-        SEEN_EPOCHS.remove(speaker);
     }
 
     public static void clear() {
         KEYS.clear();
         MISSING.clear();
         SEEN_EPOCHS.clear();
+        FORGOTTEN_EPOCHS.clear();
+        REPLAY_HISTORY.clear();
     }
 
     private static Entry find(UUID speaker, int epoch) {
