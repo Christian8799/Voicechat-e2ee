@@ -218,10 +218,10 @@ public final class WhitelistService {
         String prefix = "w " + recipientName + " " + ChatCodec.HEADER;
         List<String> texts;
         try {
-            texts = ChatCodec.encode(blob, random.nextInt(256), ChatCodec.maxChunkSize(prefix.length()));
+            texts = ChatCodec.encode(blob, random.nextInt(1 << 16), ChatCodec.maxChunkSize(prefix.length()));
         } catch (IllegalArgumentException e) {
             LOG.log(System.Logger.Level.WARNING, "Message does not fit into whispers", e);
-            return true; // retrying would not help
+            return false; // never mark an undeliverable grant as queued
         }
         if (outbox.size() + texts.size() > MAX_QUEUE) {
             return false;
