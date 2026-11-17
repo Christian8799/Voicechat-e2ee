@@ -98,6 +98,8 @@ public final class WhitelistSelfTest {
         }
         check(ChatCodec.fromText("abc") == null, "characters outside the alphabet are rejected");
         check(ChatCodec.fromText("\u8E00") == null && ChatCodec.fromText("\u4DFF") == null, "alphabet borders are exact");
+        List<String> wideId = ChatCodec.encode(new byte[]{1, 2, 3}, 0xABCD, 32);
+        check(ChatCodec.decodeFragment(wideId.getFirst()).messageId() == 0xABCD, "fragment IDs preserve all 16 bits");
         check(ChatCodec.fromText("\u4E00\u8DFF") != null, "first and last character of the alphabet are accepted");
 
         // Every whisper fits into a chat command, for every possible name length, and reassembles in any order
