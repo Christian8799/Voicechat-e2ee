@@ -46,7 +46,7 @@ public final class OwnVoiceKey {
         if (key == null) {
             synchronized (OwnVoiceKey.class) {
                 if (current == null) {
-                    current = generate(1);
+                    current = generate((int) Math.max(1L, System.currentTimeMillis() / 1000L));
                 }
                 key = current;
             }
