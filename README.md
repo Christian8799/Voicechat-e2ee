@@ -82,8 +82,8 @@ With a shared key, everybody who has the key hears you, and you cannot take the 
 **whitelist mode** you pick the players who may hear you, and you can remove them again at any time.
 
 1. Everybody involved needs this mod, as before, and an online-mode account (see Limitations).
-2. Turn it on: `/vcwl mode whitelist`.
-3. Add the players who may hear you: `/vcwl add <player>`. They must be online when you add them.
+2. Open the mod settings from the Simple Voice Chat window, then choose **Configure whitelist...**.
+3. Switch **Mode** to **WHITELIST**, enter an online player's name and press **Add player**. The key exchange starts automatically.
 4. They add you the same way. **You hear someone only if they whitelisted you, and they hear you only if you
    whitelisted them.** Players you did not add (and strangers) hear silence.
 
@@ -92,14 +92,16 @@ everybody you can hear this way.
 
 | Command | Effect |
 | --- | --- |
-| `/vcwl` or `/vcwl list` | mode, and for every player whether your key grant is queued locally (delivery is not confirmed) and whether you have theirs |
-| `/vcwl add <player>` | the player (online) may hear you from now on; their key is exchanged automatically |
-| `/vcwl remove <name>` | they cannot hear you anymore. Your voice key is replaced and the others get the new one. You stop hearing them, too |
-| `/vcwl mode whitelist` / `key` | send to your whitelist only / send with the shared key (the original behavior, still the default) |
-| `/vcwl resend` | hand your key to everybody on the list again |
+| GUI control | Effect |
+| --- | --- |
+| **Mode** | Switch between whitelist mode and the original shared-key mode |
+| **Add player** | Add an online player by name; the key exchange starts automatically |
+| **Remove** | Remove a listed player. Your voice key rotates and the remaining players receive the new grant |
+| **Resend keys** | Queue the current key grant again for all listed players |
+| **Player status** | Shows online/offline, whether your grant is queued locally, and whether you have received their key |
 
-The mode and the list are stored in `config/voicechat-e2ee-whitelist.txt`. The encryption switch (incognito button)
-turns whitelist encryption on and off just like it does for the shared key.
+The encryption and strict-hearing switches remain in the main E2EE settings screen. The whitelist mode and list are
+stored in `config/voicechat-e2ee-whitelist.txt`.
 
 ### How whitelist mode works
 
@@ -134,15 +136,19 @@ turns whitelist encryption on and off just like it does for the shared key.
   anybody who later gets that old profile private key.
 - **A whitelisted player can record you** and tell others. Removing somebody only stops them from hearing what you say
   from then on.
-- **The whitelist has no buttons in the settings window yet.** Use `/vcwl`.
+- **Only online players can be added from the GUI.** They need an active profile chat key for the secure key exchange; offline entries can still be viewed and removed.
 
 ## Optional commands
 
-Commands are not needed any more, but they still work as shortcuts:
+All settings can be configured in the GUI. These client-side commands remain available as optional shortcuts:
 
 | Command | Effect |
 | --- | --- |
 | `/vckey gui` | opens the settings window (a fallback in case the buttons are missing after a Simple Voice Chat update) |
+| `/vcwl` | shows whitelist status |
+| `/vcwl add <player>` / `remove <player>` | add or remove an online/listed player |
+| `/vcwl mode whitelist` / `key` | change sending mode |
+| `/vcwl resend` | queue key grants again |
 | `/vckey` | status, key code |
 | `/vckey generate` | generate and save a new random key |
 | `/vckey show` | show your own key in chat |

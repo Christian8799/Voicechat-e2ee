@@ -24,7 +24,7 @@ public class E2EESettingsScreen extends VoiceChatScreenBase {
     private static final Component TITLE = Component.literal("Voice Chat E2EE");
 
     public static final int WIDTH = 256;
-    public static final int HEIGHT = 212;
+    public static final int HEIGHT = 238;
 
     private static final int MARGIN = 10;
     private static final int GENERATE_CONFIRM_TICKS = 60;
@@ -40,6 +40,7 @@ public class E2EESettingsScreen extends VoiceChatScreenBase {
     private Button reveal;
     private Button apply;
     private Button generate;
+    private Button whitelist;
     private EditBox keyBox;
 
     /** What is typed in the key field. Kept here so it survives resizing the window. */
@@ -102,6 +103,11 @@ public class E2EESettingsScreen extends VoiceChatScreenBase {
         generate = Button.builder(Component.empty(), button -> onGenerate())
                 .bounds(left + half + 2, guiTop + 128, fullWidth - half - 2, 20).build();
         addRenderableWidget(generate);
+
+        whitelist = Button.builder(Component.literal("Configure whitelist..."), button ->
+                minecraft.gui.setScreen(new WhitelistSettingsScreen(this)))
+                .bounds(left, guiTop + 184, fullWidth, 20).build();
+        addRenderableWidget(whitelist);
 
         Button done = Button.builder(Component.literal(SettingsModel.DONE_LABEL), button -> close())
                 .bounds(left, guiTop + ySize - 20 - 8, fullWidth, 20).build();
