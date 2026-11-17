@@ -106,7 +106,7 @@ public class E2EESettingsScreen extends VoiceChatScreenBase {
 
         whitelist = Button.builder(Component.literal("Configure whitelist..."), button ->
                 minecraft.gui.setScreen(new WhitelistSettingsScreen(this)))
-                .bounds(left, guiTop + 178, fullWidth, 20).build();
+                .bounds(left, guiTop + 184, fullWidth, 20).build();
         addRenderableWidget(whitelist);
 
         Button done = Button.builder(Component.literal(SettingsModel.DONE_LABEL), button -> close())
