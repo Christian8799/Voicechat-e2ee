@@ -92,7 +92,7 @@ everybody you can hear this way.
 
 | Command | Effect |
 | --- | --- |
-| `/vcwl` or `/vcwl list` | mode, and for every player on the list whether your key reached them and whether you have theirs |
+| `/vcwl` or `/vcwl list` | mode, and for every player on the list whether your key grant was queued for them (delivery is not confirmed) and whether you have theirs |
 | `/vcwl add <player>` | the player (online) may hear you from now on; their key is exchanged automatically |
 | `/vcwl remove <name>` | they cannot hear you anymore. Your voice key is replaced and the others get the new one. You stop hearing them, too |
 | `/vcwl mode whitelist` / `key` | send to your whitelist only / send with the shared key (the original behavior, still the default) |
