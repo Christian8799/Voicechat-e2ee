@@ -26,7 +26,7 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
 
     private static final Component TITLE = Component.literal("Voice E2EE - Whitelist");
     private static final int WIDTH = 300;
-    private static final int HEIGHT = 246;
+    private static final int HEIGHT = 256;
     private static final int MARGIN = 10;
     private static final int ROWS_PER_PAGE = 5;
     private static final int ROW_HEIGHT = 17;
@@ -102,11 +102,11 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
 
         int half = (fullWidth - 4) / 2;
         resend = Button.builder(Component.literal("Resend keys"), button -> resendKeys())
-                .bounds(left, guiTop + 215, half, 20).build();
+                .bounds(left, guiTop + 226, half, 20).build();
         addRenderableWidget(resend);
 
         done = Button.builder(Component.literal("Done"), button -> close())
-                .bounds(left + half + 4, guiTop + 215, fullWidth - half - 4, 20).build();
+                .bounds(left + half + 4, guiTop + 226, fullWidth - half - 4, 20).build();
         addRenderableWidget(done);
 
         refresh();
@@ -274,6 +274,6 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
         int visibleStatusColor = !E2EEState.snapshot().enabled() && WhitelistState.isWhitelistMode()
                 ? COLOR_WARN : statusColor;
         guiGraphics.text(font, Component.literal(font.plainSubstrByWidth(visibleStatus, xSize - MARGIN * 2)),
-                guiLeft + MARGIN, guiTop + 202, visibleStatusColor, false);
+                guiLeft + MARGIN, guiTop + 207, visibleStatusColor, false);
     }
 }
