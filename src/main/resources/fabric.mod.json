@@ -3,7 +3,7 @@
   "id": "voicechat_e2ee",
   "version": "${mod_version}",
   "name": "Voice Chat E2EE",
-  "description": "Encrypts Simple Voice Chat with a shared key. Only players with the same key can hear each other. Encrypted players get an incognito icon next to their skin. Everything is set in a settings window that opens from the Simple Voice Chat window.",
+  "description": "Encrypts Simple Voice Chat with a shared key, or only for the players on your whitelist. Only players with the same key (or on your whitelist) can hear you. Encrypted players get an incognito icon next to their skin. Everything is set in a settings window that opens from the Simple Voice Chat window.",
   "license": "MIT",
   "environment": "client",
   "entrypoints": {
@@ -13,7 +13,8 @@
   },
   "mixins": [
     "voicechat_e2ee.mixins.json",
-    "voicechat_e2ee.ui.mixins.json"
+    "voicechat_e2ee.ui.mixins.json",
+    "voicechat_e2ee.chat.mixins.json"
   ],
   "depends": {
     "fabricloader": ">=${fabric_loader_version}",

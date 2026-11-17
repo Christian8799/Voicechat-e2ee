@@ -1,6 +1,6 @@
 plugins {
     // Same Loom plugin as Simple Voice Chat uses for 26.x (Minecraft is no longer obfuscated as of 26.1)
-    id 'net.fabricmc.fabric-loom' version '1.19-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.19.4'
 }
 
 version = project.mod_version
@@ -51,4 +51,13 @@ tasks.withType(JavaCompile).configureEach {
 
 java {
     withSourcesJar()
+}
+
+// The project uses a lightweight self-test harness instead of JUnit.
+tasks.register('selfTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs the project self-tests, including whitelist cryptography and audio-path checks.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'voicechate2ee.SelfTest'
 }

@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "voicechate2ee.mixin.chat",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "ChatListenerMixin",
+    "KeyPairAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

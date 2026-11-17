@@ -1,6 +1,7 @@
 package voicechate2ee.config;
 
 import voicechate2ee.crypto.VoiceKey;
+import voicechate2ee.whitelist.WhitelistState;
 
 import java.io.IOException;
 
@@ -72,14 +73,14 @@ public final class SettingsModel {
         return !normalizeKey(editText).isEmpty() && isKeyDirty(s, editText);
     }
 
-    /** Turning encryption ON needs a key. Turning it OFF is always possible. */
+    /** Turning encryption ON needs a key (not in whitelist mode, which has its own keys). Turning it OFF is always possible. */
     public static boolean canToggleEncryption(E2EEState.Snapshot s) {
-        return s.enabled() || s.key() != null;
+        return s.enabled() || s.key() != null || WhitelistState.isWhitelistMode();
     }
 
     /** True if the microphone is actually sent encrypted right now. */
     public static boolean isSendingEncrypted(E2EEState.Snapshot s) {
-        return s.enabled() && s.key() != null;
+        return s.enabled() && (s.key() != null || WhitelistState.isWhitelistMode());
     }
 
     // ---------------------------------------------------------------- texts
@@ -116,11 +117,13 @@ public final class SettingsModel {
 
     /** Tooltip of the incognito quick toggle button. */
     public static String quickToggleTooltip(E2EEState.Snapshot s) {
-        if (s.key() == null) {
+        if (s.key() == null && !WhitelistState.isWhitelistMode()) {
             return "Encryption: OFF\nNo key set. Click to set one up.";
         }
         if (s.enabled()) {
-            return "Encryption: ON\nYou send encrypted.\nClick to turn it off.";
+            return WhitelistState.isWhitelistMode()
+                    ? "Encryption: ON\nOnly your whitelist hears you.\nClick to turn it off."
+                    : "Encryption: ON\nYou send encrypted.\nClick to turn it off.";
         }
         return "Encryption: OFF\nYou send unencrypted.\nClick to turn it on.";
     }
@@ -130,6 +133,9 @@ public final class SettingsModel {
     }
 
     public static Line sendLine(E2EEState.Snapshot s) {
+        if (s.enabled() && WhitelistState.isWhitelistMode()) {
+            return new Line("Only your whitelist hears you.", Tone.GOOD);
+        }
         if (s.enabled() && s.key() == null) {
             return new Line("No key set: you send nothing!", Tone.WARN);
         }
@@ -141,6 +147,9 @@ public final class SettingsModel {
     public static Line hearLine(E2EEState.Snapshot s) {
         if (!s.enabled()) {
             return new Line("You still hear players with your key.", Tone.NORMAL);
+        }
+        if (WhitelistState.isWhitelistMode() && s.requireEncryption()) {
+            return new Line("Players who did not whitelist you are muted.", Tone.NORMAL);
         }
         return s.requireEncryption()
                 ? new Line("Players without your key are muted.", Tone.NORMAL)

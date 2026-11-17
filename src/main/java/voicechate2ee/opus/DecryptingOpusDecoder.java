@@ -5,6 +5,7 @@ import voicechate2ee.config.E2EEState;
 import voicechate2ee.config.EncryptedPlayers;
 import voicechate2ee.crypto.OpusEnvelope;
 import voicechate2ee.crypto.PacketCipher;
+import voicechate2ee.whitelist.ReceivedKeys;
 
 import java.util.UUID;
 
@@ -14,6 +15,9 @@ import java.util.UUID;
  * <p>Decryption <b>always</b> happens as soon as a key is set, even if you have switched your own encryption
  * off: anyone who speaks encrypted with your key stays audible. The {@code enabled} switch only controls
  * whether you send encrypted yourself.
+ *
+ * <p>Besides the shared key, packets are also opened with the voice key that the speaker handed you, if they are
+ * on your whitelist (see {@link ReceivedKeys}).
  *
  * <p>Packets that are not readable with your key (no key, different key, unencrypted) are dropped (silence)
  * while encryption is active and strict, and are otherwise played unchanged.
@@ -76,14 +80,28 @@ public final class DecryptingOpusDecoder implements OpusDecoder {
      */
     private byte[] unseal(byte[] data, E2EEState.Snapshot state) {
         byte[] inner = null;
-        if (state.key() != null) {
-            byte[] sealed = OpusEnvelope.unwrap(data);
-            if (sealed != null) {
+        String code = null;
+        byte[] sealed = OpusEnvelope.unwrap(data);
+        if (sealed != null) {
+            // 1. the voice key this speaker gave us because they whitelisted us
+            inner = ReceivedKeys.open(speaker, sealed);
+            if (inner != null) {
+                code = EncryptedPlayers.WHITELIST_CODE;
+            }
+            // 2. the shared key
+            if (inner == null && state.key() != null) {
                 inner = PacketCipher.open(sealed, state.key());
+                if (inner != null) {
+                    code = state.key().fingerprint();
+                }
+            }
+            // 3. nothing worked: maybe a whitelisted friend whose key we lost, then we ask for it again
+            if (inner == null) {
+                ReceivedKeys.noteUnreadable(speaker, sealed);
             }
         }
         if (inner != null) {
-            EncryptedPlayers.markEncrypted(speaker, state.key().fingerprint());
+            EncryptedPlayers.markEncrypted(speaker, code);
         } else {
             EncryptedPlayers.markUnverified(speaker);
         }
