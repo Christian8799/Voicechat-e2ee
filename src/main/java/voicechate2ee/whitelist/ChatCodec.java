@@ -98,7 +98,7 @@ public final class ChatCodec {
 
     /** @return the text of each whisper (without the header), one per fragment */
     public static List<String> encode(byte[] blob, int messageId, int chunkSize) {
-        if (blob.length == 0 || chunkSize <= 0) {
+        if (blob.length == 0 || chunkSize <= 0 || messageId < 0 || messageId > 0xFFFF) {
             throw new IllegalArgumentException("Nothing to encode");
         }
         int total = (blob.length + chunkSize - 1) / chunkSize;
