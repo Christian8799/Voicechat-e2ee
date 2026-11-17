@@ -30,9 +30,16 @@ public abstract class ChatListenerMixin {
     private void voicechatE2ee$takeKeyMessages(ChatType.Bound boundChatType, PlayerChatMessage message, Component decoratedMessage,
                                                GameProfile sender, boolean onlyShowSecure, Instant received,
                                                CallbackInfoReturnable<Boolean> cir) {
+        // Only consume incoming private whispers. A public chat message containing our marker must remain visible.
+        if (!boundChatType.chatType().is(ChatType.MSG_COMMAND_INCOMING)) {
+            return;
+        }
         String content = message.signedContent();
-        int index = content.indexOf(ChatCodec.HEADER);
-        if (index == -1) {
+        if (content == null || !content.startsWith(ChatCodec.HEADER)) {
+            return;
+        }
+        String payload = content.substring(ChatCodec.HEADER.length());
+        if (ChatCodec.decodeFragment(payload) == null) {
             return;
         }
         UUID self = WhitelistState.selfId();
@@ -41,7 +48,7 @@ public abstract class ChatListenerMixin {
             cir.setReturnValue(false);
             return;
         }
-        WhitelistService.getInstance().onChatPayload(content.substring(index + ChatCodec.HEADER.length()), sender.id(), sender.name());
+        WhitelistService.getInstance().onChatPayload(payload, sender.id(), sender.name());
         cir.setReturnValue(true);
     }
 }
