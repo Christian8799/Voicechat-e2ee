@@ -153,7 +153,8 @@ public final class WhitelistService {
         }
         while (!outbox.isEmpty() && spamCounter + SPAM_COST <= SPAM_BUDGET) {
             Outgoing item = outbox.poll();
-            if (item.grant() && (!WhitelistState.contains(item.recipient())
+            if (item.grant() && (!WhitelistState.isWhitelistMode() || !E2EEState.snapshot().enabled()
+                    || !WhitelistState.contains(item.recipient())
                     || item.epoch() != OwnVoiceKey.current().epoch())) {
                 continue; // stale grant invalidated by removal or rotation
             }
