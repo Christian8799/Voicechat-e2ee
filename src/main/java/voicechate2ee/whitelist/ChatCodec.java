@@ -16,7 +16,7 @@ import java.util.UUID;
  * {@value #MAX_FRAGMENTS} fragments, each of which is a separate whisper:
  *
  * <pre>
- * fragment = messageId(1) | index(4 bit) total(4 bit) | length(2) | chunk
+ * fragment = messageId(2) | index(4 bit) total(4 bit) | length(2) | chunk
  * whisper  = "w &lt;name&gt; " HEADER text(fragment)
  * </pre>
  *
@@ -29,7 +29,7 @@ public final class ChatCodec {
     /** One less than the vanilla chat length limit of 256. */
     public static final int MAX_COMMAND_LENGTH = 255;
     public static final int MAX_FRAGMENTS = 4;
-    public static final int FRAGMENT_HEADER_SIZE = 4;
+    public static final int FRAGMENT_HEADER_SIZE = 5;
 
     private static final int BITS = 14;
     private static final int BASE = 0x4E00;
@@ -111,10 +111,11 @@ public final class ChatCodec {
             int end = Math.min(blob.length, start + chunkSize);
             int length = end - start;
             byte[] raw = new byte[FRAGMENT_HEADER_SIZE + length];
-            raw[0] = (byte) messageId;
-            raw[1] = (byte) (i << 4 | total);
-            raw[2] = (byte) (length >> 8);
-            raw[3] = (byte) length;
+            raw[0] = (byte) (messageId >>> 8);
+            raw[1] = (byte) messageId;
+            raw[2] = (byte) (i << 4 | total);
+            raw[3] = (byte) (length >> 8);
+            raw[4] = (byte) length;
             System.arraycopy(blob, start, raw, FRAGMENT_HEADER_SIZE, length);
             result.add(toText(raw));
         }
@@ -130,10 +131,10 @@ public final class ChatCodec {
         if (raw == null || raw.length < FRAGMENT_HEADER_SIZE + 1) {
             return null;
         }
-        int messageId = raw[0] & 0xFF;
-        int index = (raw[1] & 0xFF) >> 4;
-        int total = raw[1] & 0x0F;
-        int length = (raw[2] & 0xFF) << 8 | (raw[3] & 0xFF);
+        int messageId = (raw[0] & 0xFF) << 8 | (raw[1] & 0xFF);
+        int index = (raw[2] & 0xFF) >> 4;
+        int total = raw[2] & 0x0F;
+        int length = (raw[3] & 0xFF) << 8 | (raw[4] & 0xFF);
         int available = raw.length - FRAGMENT_HEADER_SIZE;
         // the text encoding may add one byte of zero padding at the end
         if (total < 1 || total > MAX_FRAGMENTS || index >= total || length < 1 || length > available || available - length > 1) {
@@ -168,6 +169,11 @@ public final class ChatCodec {
 
         /** @return the complete message once all fragments have arrived, otherwise {@code null} */
         public byte[] offer(UUID sender, Fragment fragment, long nowMs) {
+            if (sender == null || fragment == null || fragment.data() == null
+                    || fragment.total() < 1 || fragment.total() > MAX_FRAGMENTS
+                    || fragment.index() < 0 || fragment.index() >= fragment.total()) {
+                return null;
+            }
             pending.values().removeIf(p -> nowMs - p.createdAt > TIMEOUT_MS);
             if (fragment.total() == 1) {
                 return fragment.data();
