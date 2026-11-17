@@ -2,6 +2,7 @@ package voicechate2ee.whitelist;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -16,6 +17,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class ReceivedKeys {
 
     private static final int KEEP_EPOCHS = 2;
+    // Remember retired epochs for this connection so a replayed old grant cannot reinstall an evicted key.
+    private static final int MAX_SEEN_EPOCHS_PER_SPEAKER = 1024;
 
     /** A key plus the replay protection for its packets. */
     public static final class Entry {
@@ -36,6 +39,7 @@ public final class ReceivedKeys {
 
     private static final Map<UUID, List<Entry>> KEYS = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> MISSING = new ConcurrentHashMap<>();
+    private static final Map<UUID, Set<Integer>> SEEN_EPOCHS = new ConcurrentHashMap<>();
 
     private ReceivedKeys() {
     }
@@ -49,28 +53,30 @@ public final class ReceivedKeys {
      * @return true if the key was new
      */
     public static boolean put(UUID speaker, int epoch, byte[] key, long firstCounter) {
-        boolean[] added = {false};
-        KEYS.compute(speaker, (id, list) -> {
-            if (list != null) {
-                for (Entry e : list) {
-                    if (e.epoch == epoch) {
-                        return list;
-                    }
+        if (speaker == null || key == null || key.length != VoiceKeyGrant.KEY_SIZE || firstCounter < 0) {
+            return false;
+        }
+        Set<Integer> seen = SEEN_EPOCHS.computeIfAbsent(speaker, ignored -> ConcurrentHashMap.newKeySet());
+        synchronized (seen) {
+            // Do not reinstall an epoch after it has fallen out of the two-key decryption window.
+            if (seen.contains(epoch) || seen.size() >= MAX_SEEN_EPOCHS_PER_SPEAKER) {
+                return false;
+            }
+            seen.add(epoch);
+            KEYS.compute(speaker, (id, list) -> {
+                List<Entry> next = new CopyOnWriteArrayList<>();
+                if (list != null) {
+                    next.addAll(list);
                 }
-            }
-            List<Entry> next = new CopyOnWriteArrayList<>();
-            if (list != null) {
-                next.addAll(list);
-            }
-            next.add(new Entry(epoch, key.clone(), firstCounter));
-            while (next.size() > KEEP_EPOCHS) {
-                next.remove(0);
-            }
-            added[0] = true;
-            return next;
-        });
+                next.add(new Entry(epoch, key.clone(), firstCounter));
+                while (next.size() > KEEP_EPOCHS) {
+                    next.remove(0);
+                }
+                return next;
+            });
+        }
         MISSING.remove(speaker);
-        return added[0];
+        return true;
     }
 
     public static boolean has(UUID speaker) {
@@ -81,11 +87,13 @@ public final class ReceivedKeys {
     public static void forget(UUID speaker) {
         KEYS.remove(speaker);
         MISSING.remove(speaker);
+        SEEN_EPOCHS.remove(speaker);
     }
 
     public static void clear() {
         KEYS.clear();
         MISSING.clear();
+        SEEN_EPOCHS.clear();
     }
 
     private static Entry find(UUID speaker, int epoch) {
