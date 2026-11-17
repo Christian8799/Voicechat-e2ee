@@ -92,7 +92,7 @@ everybody you can hear this way.
 
 | Command | Effect |
 | --- | --- |
-| `/vcwl` or `/vcwl list` | mode, and for every player on the list whether your key grant was queued for them (delivery is not confirmed) and whether you have theirs |
+| `/vcwl` or `/vcwl list` | mode, and for every player whether your key grant is queued locally (delivery is not confirmed) and whether you have theirs |
 | `/vcwl add <player>` | the player (online) may hear you from now on; their key is exchanged automatically |
 | `/vcwl remove <name>` | they cannot hear you anymore. Your voice key is replaced and the others get the new one. You stop hearing them, too |
 | `/vcwl mode whitelist` / `key` | send to your whitelist only / send with the shared key (the original behavior, still the default) |
@@ -111,8 +111,11 @@ turns whitelist encryption on and off just like it does for the shared key.
   certified for that account. Only the receiver can open it.
 - The whisper is also signed with the profile key of the sender. So the receiver knows it is really you and that it
   is meant for them, and a server cannot slip in a key of its own. There is nothing to compare by hand.
-- Packets carry a counter, and the receiver drops replayed and too old packets. The speaker's UUID is part of the
-  authentication, so a server cannot pass off one player's audio as another's.
+- Packets carry a counter, and the receiver rejects duplicate packets and packets outside a 64-packet reordering
+  window. It also rejects grants for epochs older than the newest accepted epoch. This prevents ordinary captured
+  packets and old grants from being replayed, but cannot stop a server from delaying a never-before-delivered valid
+  packet until it is first accepted inside the window. The speaker's UUID is authenticated, so packets cannot be
+  passed off as another player's audio.
 - If you hear a whitelisted player but have no key from them (for example after restarting your game), the mod asks
   them for it with a short whisper and they answer automatically.
 - Whispers are paced (a burst of a few, then one per second) so servers do not kick you for chat spam.
@@ -196,8 +199,10 @@ The finished file is in `build/libs/voicechat-e2ee-1.2.0.jar`. To test with a de
   they may still hear about 60 ms of reverb after switching, then silence.
 - **Server plugins that process audio** (radio, recording, voice filters) only see ciphertext and
   do not work with encrypted speakers. Proximity, groups and whispering keep working.
-- **Replay (shared key mode):** A server admin could resend recorded packets (replay). They cannot read or modify
-  them. Whitelist mode rejects replayed packets.
+- **Replay:** Shared-key mode does not have replay protection. Whitelist mode rejects duplicate packets and stale
+  epochs, but a valid packet that was captured and delayed before its first delivery may still be accepted once if
+  it arrives within the receiver's 64-packet window. The server can also delay or drop key whispers; queued grants
+  are retried, but vanilla whispers provide no end-to-end delivery acknowledgement.
 - **Mixins on internals:** The mod accesses private fields of Simple Voice Chat (`MicThread.encoder`,
   `AudioChannel.decoder`, `AudioChannel.uuid`, `AudioChannel.client`). After major updates of Simple
   Voice Chat, adjustments may be necessary.
