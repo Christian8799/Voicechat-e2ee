@@ -60,7 +60,7 @@ public final class OwnVoiceKey {
         if (old != null && old.epoch == Integer.MAX_VALUE) {
             throw new IllegalStateException("Voice key epoch exhausted; restart the client before rotating again");
         }
-        current = generate(old == null ? 1 : old.epoch + 1);
+        current = generate(old == null ? (int) Math.max(1L, System.currentTimeMillis() / 1000L) : old.epoch + 1);
         return current;
     }
 
