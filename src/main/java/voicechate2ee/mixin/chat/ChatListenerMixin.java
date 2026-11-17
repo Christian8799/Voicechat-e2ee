@@ -35,8 +35,11 @@ public abstract class ChatListenerMixin {
             return;
         }
         String content = message.signedContent();
-        int index = content.indexOf(ChatCodec.HEADER);
-        if (index == -1) {
+        if (content == null || !content.startsWith(ChatCodec.HEADER)) {
+            return;
+        }
+        String payload = content.substring(ChatCodec.HEADER.length());
+        if (ChatCodec.decodeFragment(payload) == null) {
             return;
         }
         UUID self = WhitelistState.selfId();
@@ -45,7 +48,7 @@ public abstract class ChatListenerMixin {
             cir.setReturnValue(false);
             return;
         }
-        WhitelistService.getInstance().onChatPayload(content.substring(index + ChatCodec.HEADER.length()), sender.id(), sender.name());
+        WhitelistService.getInstance().onChatPayload(payload, sender.id(), sender.name());
         cir.setReturnValue(true);
     }
 }
