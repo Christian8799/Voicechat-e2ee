@@ -255,6 +255,7 @@ public final class WhitelistSelfTest {
         check(ReceivedKeys.open(alice, p300) == null, "...so it cannot reset the replay protection");
         check(ReceivedKeys.put(alice, 2, random(32), 0L) && ReceivedKeys.put(alice, 3, random(32), 0L), "newer epochs are added");
         check(ReceivedKeys.open(alice, WhitelistCipher.seal(plain, key, 1, 400L, alice)) == null, "only the last two epochs are kept");
+        check(!ReceivedKeys.put(alice, 1, key, 100L), "an evicted old epoch cannot be reinstalled by replaying its grant");
         check(ReceivedKeys.open(UUID.randomUUID(), p101) == null && ReceivedKeys.open(null, p101) == null, "unknown speaker");
         ReceivedKeys.forget(alice);
         check(!ReceivedKeys.has(alice), "forget removes the keys");
