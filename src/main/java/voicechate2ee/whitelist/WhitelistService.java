@@ -57,10 +57,13 @@ public final class WhitelistService {
     private static final long NOTICE_COOLDOWN_MS = 30_000;
 
     private final SecureRandom random = new SecureRandom();
-    private final ArrayDeque<String> outbox = new ArrayDeque<>();
+    private record Outgoing(String command, UUID recipient, int epoch, boolean grant) { }
+    private final ArrayDeque<Outgoing> outbox = new ArrayDeque<>();
     private final ChatCodec.Reassembler reassembler = new ChatCodec.Reassembler();
     /** The epoch of our key that each player has been sent in this session. */
     private final Map<UUID, Integer> granted = new HashMap<>();
+    /** Local queue time only; no delivery acknowledgement exists for vanilla /w. */
+    private final Map<UUID, Long> grantQueuedAt = new HashMap<>();
     private final Map<UUID, Long> grantFailedAt = new HashMap<>();
     private final Map<UUID, Long> requestSentAt = new HashMap<>();
     private final Map<UUID, Long> requestHandledAt = new HashMap<>();
@@ -86,6 +89,7 @@ public final class WhitelistService {
     /** A player was added: they get your key as soon as possible. */
     public void onAdded(UUID player) {
         granted.remove(player);
+        grantQueuedAt.remove(player);
         grantFailedAt.remove(player);
         scanNow = true;
     }
@@ -98,14 +102,19 @@ public final class WhitelistService {
         ReceivedKeys.forget(player);
         EncryptedPlayers.markUnverified(player);
         OwnVoiceKey.rotate();
+        // Do not let a previously queued key grant escape after a removal/rotation.
+        outbox.removeIf(item -> item.grant());
         granted.clear();
+        grantQueuedAt.clear();
         grantFailedAt.clear();
         scanNow = true;
     }
 
     /** Sends your key to everybody on the whitelist again. */
     public void resend() {
+        outbox.removeIf(item -> item.grant());
         granted.clear();
+        grantQueuedAt.clear();
         grantFailedAt.clear();
         scanNow = true;
     }
@@ -143,7 +152,12 @@ public final class WhitelistService {
             scan(mc, connection, self);
         }
         while (!outbox.isEmpty() && spamCounter + SPAM_COST <= SPAM_BUDGET) {
-            connection.sendCommand(outbox.poll());
+            Outgoing item = outbox.poll();
+            if (item.grant() && (!WhitelistState.contains(item.recipient())
+                    || item.epoch() != OwnVoiceKey.current().epoch())) {
+                continue; // stale grant invalidated by removal or rotation
+            }
+            connection.sendCommand(item.command());
             spamCounter += SPAM_COST;
         }
     }
@@ -152,6 +166,7 @@ public final class WhitelistService {
         outbox.clear();
         reassembler.clear();
         granted.clear();
+        grantQueuedAt.clear();
         grantFailedAt.clear();
         requestSentAt.clear();
         requestHandledAt.clear();
@@ -170,7 +185,7 @@ public final class WhitelistService {
             if (info == null || !WhitelistState.contains(speaker) || (last != null && now - last < REQUEST_INTERVAL_MS)) {
                 continue;
             }
-            if (queue(info.getProfile().name(), VoiceKeyGrant.encodeRequest(now / 1000))) {
+            if (queue(info.getProfile().name(), speaker, -1, false, VoiceKeyGrant.encodeRequest(now / 1000))) {
                 requestSentAt.put(speaker, now);
             }
         }
@@ -183,10 +198,17 @@ public final class WhitelistService {
         for (WhitelistState.Entry entry : WhitelistState.entries()) {
             UUID uuid = entry.uuid();
             Integer epoch = granted.get(uuid);
+            Long queuedAt = grantQueuedAt.get(uuid);
             Long failed = grantFailedAt.get(uuid);
-            if (uuid.equals(self) || (epoch != null && epoch == key.epoch()) || (failed != null && now - failed < GRANT_RETRY_MS)) {
+            if (uuid.equals(self) || (epoch != null && epoch == key.epoch()
+                    && queuedAt != null && now - queuedAt < GRANT_RETRY_MS)
+                    || (failed != null && now - failed < GRANT_RETRY_MS)) {
                 continue;
             }
+            // A previous queue attempt is not a delivery receipt. Retry periodically until a fresh request
+            // or grant exchange indicates that the peer has the current key.
+            granted.remove(uuid);
+            grantQueuedAt.remove(uuid);
             PlayerInfo info = connection.getPlayerInfo(uuid);
             if (info == null) {
                 continue;
@@ -203,10 +225,11 @@ public final class WhitelistService {
             try {
                 VoiceKeyGrant.Grant grant = VoiceKeyGrant.create(ownKey, recipientKey, self, uuid,
                         key.bytes(), key.epoch(), key.nextCounter(), now / 1000);
-                if (!queue(info.getProfile().name(), VoiceKeyGrant.encodeGrant(grant))) {
+                if (!queue(info.getProfile().name(), uuid, key.epoch(), true, VoiceKeyGrant.encodeGrant(grant))) {
                     return; // queue is full: the rest follows at the next scan
                 }
                 granted.put(uuid, key.epoch());
+                grantQueuedAt.put(uuid, now);
             } catch (GeneralSecurityException e) {
                 LOG.log(System.Logger.Level.WARNING, "Could not create a voice key grant for " + entry.name(), e);
                 grantFailedAt.put(uuid, now);
@@ -214,7 +237,7 @@ public final class WhitelistService {
         }
     }
 
-    private boolean queue(String recipientName, byte[] blob) {
+    private boolean queue(String recipientName, UUID recipient, int epoch, boolean grant, byte[] blob) {
         String prefix = "w " + recipientName + " " + ChatCodec.HEADER;
         List<String> texts;
         try {
@@ -227,7 +250,7 @@ public final class WhitelistService {
             return false;
         }
         for (String text : texts) {
-            outbox.add(prefix + text);
+            outbox.add(new Outgoing(prefix + text, recipient, epoch, grant));
         }
         return true;
     }
@@ -308,6 +331,7 @@ public final class WhitelistService {
         }
         requestHandledAt.put(sender, now);
         granted.remove(sender);
+        grantQueuedAt.remove(sender);
         grantFailedAt.remove(sender);
         scanNow = true;
     }
