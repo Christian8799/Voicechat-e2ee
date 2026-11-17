@@ -268,10 +268,12 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
 
         guiGraphics.text(font, Component.literal("Page " + (page + 1) + " / " + pageCount(entries.size())
                 + "   " + entries.size() + " player(s)"), guiLeft + 48, guiTop + 194, FONT_COLOR, false);
-        guiGraphics.text(font, Component.literal(status), guiLeft + MARGIN, guiTop + 202, statusColor, false);
-        if (!E2EEState.snapshot().enabled() && WhitelistState.isWhitelistMode()) {
-            guiGraphics.text(font, Component.literal("Encryption is OFF - no voice key grants are sent."),
-                    guiLeft + MARGIN, guiTop + 211, COLOR_WARN, false);
-        }
+        String visibleStatus = !E2EEState.snapshot().enabled() && WhitelistState.isWhitelistMode()
+                ? "Encryption is OFF - no voice key grants are sent."
+                : status;
+        int visibleStatusColor = !E2EEState.snapshot().enabled() && WhitelistState.isWhitelistMode()
+                ? COLOR_WARN : statusColor;
+        guiGraphics.text(font, Component.literal(font.plainSubstrByWidth(visibleStatus, xSize - MARGIN * 2)),
+                guiLeft + MARGIN, guiTop + 202, visibleStatusColor, false);
     }
 }
