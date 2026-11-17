@@ -52,3 +52,12 @@ tasks.withType(JavaCompile).configureEach {
 java {
     withSourcesJar()
 }
+
+// The project uses a lightweight self-test harness instead of JUnit.
+tasks.register('selfTest', JavaExec) {
+    group = 'verification'
+    description = 'Runs the project self-tests, including whitelist cryptography and audio-path checks.'
+    dependsOn tasks.named('testClasses')
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'voicechate2ee.SelfTest'
+}
