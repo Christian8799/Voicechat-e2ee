@@ -103,7 +103,7 @@ public final class WhitelistCommand {
         try {
             boolean added = WhitelistState.add(uuid, realName);
             WhitelistService.getInstance().onAdded(uuid);
-            out(out, added ? realName + " may hear you now." : realName + " is already on your whitelist.");
+            out(out, added ? realName + " was added. They can hear you once the key grant reaches them." : realName + " is already on your whitelist.");
         } catch (IOException e) {
             out(out, "Could not save the whitelist: " + e.getMessage());
             return;
@@ -165,7 +165,7 @@ public final class WhitelistCommand {
         }
         WhitelistService service = WhitelistService.getInstance();
         for (WhitelistState.Entry entry : entries) {
-            String hears = !whitelistMode ? "-" : service.isGranted(entry.uuid()) ? "key sent" : "key not sent yet";
+            String hears = !whitelistMode ? "-" : service.isGranted(entry.uuid()) ? "grant queued (unconfirmed)" : "key not queued";
             String youHear = ReceivedKeys.has(entry.uuid()) ? "key received" : "no key yet";
             out(out, "  " + entry.name() + ": they hear you: " + hears + ", you hear them: " + youHear);
         }
