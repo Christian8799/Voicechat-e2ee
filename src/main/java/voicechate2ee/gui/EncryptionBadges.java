@@ -3,6 +3,7 @@ package voicechate2ee.gui;
 import de.maxhenkel.voicechat.voice.client.ClientManager;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.config.EncryptedPlayers;
+import voicechate2ee.config.SettingsModel;
 import voicechate2ee.crypto.VoiceKey;
 
 import java.util.UUID;
@@ -15,11 +16,12 @@ public final class EncryptionBadges {
 
     /**
      * <ul>
-     *   <li><b>You:</b> yes, as long as you send encrypted (encryption on and a key set).</li>
-     *   <li><b>Others:</b> yes, if their most recently heard speech was readable with your key.</li>
+     *   <li><b>You:</b> yes, as long as you send encrypted (encryption on, and a key set or whitelist mode).</li>
+     *   <li><b>Others:</b> yes, if their most recently heard speech was readable with your key, or with the
+     *       voice key they gave you because you are on their whitelist.</li>
      * </ul>
-     * Without your own key there is no icon, because without a key nobody can be recognized as
-     * "encrypted with my key".
+     * Without your own key, only players heard through the whitelist get an icon, because nobody else can be
+     * recognized as "encrypted with my key".
      */
     public static boolean isEncrypted(UUID player) {
         if (player == null) {
@@ -27,14 +29,11 @@ public final class EncryptionBadges {
         }
         E2EEState.Snapshot state = E2EEState.snapshot();
         VoiceKey key = state.key();
-        if (key == null) {
-            return false;
-        }
         // New voice chat connection: clear the list (see EncryptedPlayers)
         EncryptedPlayers.bindSession(ClientManager.getClient());
         if (player.equals(ClientManager.getPlayerStateManager().getOwnID())) {
-            return state.enabled();
+            return SettingsModel.isSendingEncrypted(state);
         }
-        return EncryptedPlayers.isEncrypted(player, key.fingerprint());
+        return EncryptedPlayers.isEncrypted(player, key == null ? null : key.fingerprint());
     }
 }

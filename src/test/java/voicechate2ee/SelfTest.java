@@ -37,6 +37,8 @@ public final class SelfTest {
         testHearEncryptedWhenDisabled();
         testEncryptedPlayers();
         testSettingsModel();
+        failures += WhitelistSelfTest.run();
+        checks += WhitelistSelfTest.checks();
         System.out.println(checks + " checks, " + failures + " failed");
         System.exit(failures == 0 ? 0 : 1);
     }

@@ -4,8 +4,11 @@ import de.maxhenkel.voicechat.api.opus.OpusEncoder;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.crypto.OpusEnvelope;
 import voicechate2ee.crypto.PacketCipher;
+import voicechate2ee.whitelist.OwnVoiceKey;
+import voicechate2ee.whitelist.WhitelistState;
 
 import java.security.GeneralSecurityException;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -35,16 +38,22 @@ public final class EncryptingOpusEncoder implements OpusEncoder {
         if (!state.enabled() || opus == null || opus.length == 0) {
             return opus;
         }
-        if (state.key() == null) {
+        boolean whitelistMode = WhitelistState.isWhitelistMode();
+        UUID self = WhitelistState.selfId();
+        if (whitelistMode ? self == null : state.key() == null) {
             // Fail-closed: better to send nothing than to send unencrypted
             if (warnedNoKey.compareAndSet(false, true)) {
-                LOG.log(System.Logger.Level.WARNING,
-                        "Encryption is enabled, but no key is set. The microphone is not being transmitted.");
+                LOG.log(System.Logger.Level.WARNING, whitelistMode
+                        ? "Whitelist mode is on, but the own player ID is not known yet. The microphone is not being transmitted."
+                        : "Encryption is enabled, but no key is set. The microphone is not being transmitted.");
             }
             return EMPTY;
         }
         try {
-            byte[] packet = OpusEnvelope.wrap(cipher.seal(opus, state.key()));
+            // Whitelist mode: your own random voice key, which only whitelisted players received.
+            // Key mode: the shared key.
+            byte[] sealed = whitelistMode ? OwnVoiceKey.seal(opus, self) : cipher.seal(opus, state.key());
+            byte[] packet = OpusEnvelope.wrap(sealed);
             if (packet.length > MAX_PAYLOAD) {
                 if (warnedTooBig.compareAndSet(false, true)) {
                     LOG.log(System.Logger.Level.WARNING,

@@ -20,6 +20,9 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class EncryptedPlayers {
 
+    /** Stored for players who were heard with the voice key they handed us (whitelist mode). It never goes stale on a key change. */
+    public static final String WHITELIST_CODE = "whitelist";
+
     private static final Map<UUID, String> VERIFIED = new ConcurrentHashMap<>();
     private static volatile WeakReference<Object> session = new WeakReference<>(null);
 
@@ -59,9 +62,16 @@ public final class EncryptedPlayers {
         }
     }
 
-    /** Is this player last heard speaking encrypted with the key that currently has the key code {@code currentKeyCode}? */
+    /**
+     * Is this player last heard speaking encrypted: with the key that currently has the key code
+     * {@code currentKeyCode} (may be {@code null} without a shared key), or with a voice key from the whitelist?
+     */
     public static boolean isEncrypted(UUID player, String currentKeyCode) {
-        return player != null && currentKeyCode != null && currentKeyCode.equals(VERIFIED.get(player));
+        if (player == null) {
+            return false;
+        }
+        String stored = VERIFIED.get(player);
+        return stored != null && (stored.equals(WHITELIST_CODE) || stored.equals(currentKeyCode));
     }
 
     /** Forgets all players. */

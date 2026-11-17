@@ -1,8 +1,8 @@
 # Voice Chat E2EE (Fabric, Minecraft 26.3)
 
 A client-side mod for [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat) that encrypts
-voice chat with a shared **key**. Only players who have entered the same key can hear each other.
-The server (and its admin) only sees ciphertext.
+voice chat with a shared **key**, or only for the players on your **whitelist**. Only players who have entered the
+same key (or whom you whitelisted) can hear you. The server (and its admin) only sees ciphertext.
 
 The mod runs **on the client only**. The server only needs Simple Voice Chat, just like before.
 
@@ -76,6 +76,63 @@ When the icon appears:
 - Players with a **different** key get no icon, because you cannot hear them.
 - Without a key of your own there are no icons.
 
+## Whitelist mode: choose who hears you
+
+With a shared key, everybody who has the key hears you, and you cannot take the key back from one person. In
+**whitelist mode** you pick the players who may hear you, and you can remove them again at any time.
+
+1. Everybody involved needs this mod, as before, and an online-mode account (see Limitations).
+2. Turn it on: `/vcwl mode whitelist`.
+3. Add the players who may hear you: `/vcwl add <player>`. They must be online when you add them.
+4. They add you the same way. **You hear someone only if they whitelisted you, and they hear you only if you
+   whitelisted them.** Players you did not add (and strangers) hear silence.
+
+The whitelist does not need a shared key, so nothing has to be copied around. The incognito icon shows up next to
+everybody you can hear this way.
+
+| Command | Effect |
+| --- | --- |
+| `/vcwl` or `/vcwl list` | mode, and for every player on the list whether your key reached them and whether you have theirs |
+| `/vcwl add <player>` | the player (online) may hear you from now on; their key is exchanged automatically |
+| `/vcwl remove <name>` | they cannot hear you anymore. Your voice key is replaced and the others get the new one. You stop hearing them, too |
+| `/vcwl mode whitelist` / `key` | send to your whitelist only / send with the shared key (the original behavior, still the default) |
+| `/vcwl resend` | hand your key to everybody on the list again |
+
+The mode and the list are stored in `config/voicechat-e2ee-whitelist.txt`. The encryption switch (incognito button)
+turns whitelist encryption on and off just like it does for the shared key.
+
+### How whitelist mode works
+
+- Every player has their own random voice key, which exists only in memory. Your voice is encrypted with it
+  (AES-256-GCM, same packet format as before). It is replaced whenever you remove somebody.
+- To hand the key to a whitelisted player, the mod sends them **two whispers** (`/w`) with some unreadable text in
+  them, and hides these whispers in your chat and theirs. The key inside is encrypted (RSA-OAEP) with the **Minecraft
+  profile key** of the receiver, the public part of which every client gets from the server and which Mojang has
+  certified for that account. Only the receiver can open it.
+- The whisper is also signed with the profile key of the sender. So the receiver knows it is really you and that it
+  is meant for them, and a server cannot slip in a key of its own. There is nothing to compare by hand.
+- Packets carry a counter, and the receiver drops replayed and too old packets. The speaker's UUID is part of the
+  authentication, so a server cannot pass off one player's audio as another's.
+- If you hear a whitelisted player but have no key from them (for example after restarting your game), the mod asks
+  them for it with a short whisper and they answer automatically.
+- Whispers are paced (a burst of a few, then one per second) so servers do not kick you for chat spam.
+
+### Whitelist limitations
+
+- **The server can see the whispers.** It cannot read them, but it can see that you exchange keys with a player, so
+  it can tell who is on your whitelist. It also still sees who speaks when.
+- **Whispers must work.** A server that blocks `/w`, a chat plugin that removes unusual characters, or a plugin that
+  delivers whispers as system messages (instead of player chat) stops the key exchange. Nothing breaks, the other
+  player just does not hear you.
+- **A whitelisted player without this mod** sees two lines of strange characters in their chat. Only add players who
+  have the mod.
+- **Online-mode accounts only.** The keys come from the Minecraft profile key, which offline-mode accounts do not have.
+- **No forward secrecy.** The profile keys change about every day, but a key grant that was recorded can be opened by
+  anybody who later gets that old profile private key.
+- **A whitelisted player can record you** and tell others. Removing somebody only stops them from hearing what you say
+  from then on.
+- **The whitelist has no buttons in the settings window yet.** Use `/vcwl`.
+
 ## Optional commands
 
 Commands are not needed any more, but they still work as shortcuts:
@@ -122,6 +179,9 @@ The finished file is in `build/libs/voicechat-e2ee-1.2.0.jar`. To test with a de
   window and the panel behind the buttons are drawn from rectangles as well, in the same look as the Simple Voice
   Chat windows.
 - The AES key is derived from the key via PBKDF2-HMAC-SHA256 (150,000 rounds).
+- In whitelist mode the key is not derived from a passphrase but is random per player and handed out as described
+  above (`voicechate2ee.whitelist`). A mixin (`ChatListenerMixin`) takes the key whispers out of the chat and another
+  one (`KeyPairAccessor`) gives access to your profile key; both are optional like the UI mixins.
 - GCM detects wrong keys and tampered packets. Such packets are dropped.
 - The ciphertext is hidden in the padding of a valid, empty Opus packet. Players without the mod
   therefore hear silence instead of noise. Verified with the real libopus.
@@ -136,8 +196,8 @@ The finished file is in `build/libs/voicechat-e2ee-1.2.0.jar`. To test with a de
   they may still hear about 60 ms of reverb after switching, then silence.
 - **Server plugins that process audio** (radio, recording, voice filters) only see ciphertext and
   do not work with encrypted speakers. Proximity, groups and whispering keep working.
-- **Replay:** A server admin could resend recorded packets (replay). They cannot read or modify
-  them.
+- **Replay (shared key mode):** A server admin could resend recorded packets (replay). They cannot read or modify
+  them. Whitelist mode rejects replayed packets.
 - **Mixins on internals:** The mod accesses private fields of Simple Voice Chat (`MicThread.encoder`,
   `AudioChannel.decoder`, `AudioChannel.uuid`, `AudioChannel.client`). After major updates of Simple
   Voice Chat, adjustments may be necessary.
@@ -154,4 +214,7 @@ The finished file is in `build/libs/voicechat-e2ee-1.2.0.jar`. To test with a de
 
 `src/test/java/voicechate2ee/SelfTest.java` checks encryption, packet format, configuration, the
 encoder/decoder wrappers, hearing with encryption switched off, the detection of encrypted
-players, and the logic behind the settings window and the quick toggle, all without Minecraft (120 checks).
+players, and the logic behind the settings window and the quick toggle, all without Minecraft.
+`WhitelistSelfTest.java` (called by `SelfTest`) covers the whitelist: the chat encoding, the key grants with real
+RSA keys (forgery, wrong recipient, tampering), packet encryption, replay protection, the whitelist file, and the
+whole voice path from encoder to decoder including removing a player.
