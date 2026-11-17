@@ -40,6 +40,8 @@ public final class ReceivedKeys {
     private static final Map<UUID, List<Entry>> KEYS = new ConcurrentHashMap<>();
     private static final Map<UUID, Long> MISSING = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Integer>> SEEN_EPOCHS = new ConcurrentHashMap<>();
+    /** Highest accepted epoch per speaker; prevents installation of a previously unseen stale epoch. */
+    private static final Map<UUID, Integer> HIGHEST_EPOCH = new ConcurrentHashMap<>();
     private static final Map<UUID, Set<Integer>> FORGOTTEN_EPOCHS = new ConcurrentHashMap<>();
     private static final Map<UUID, Map<Integer, ReplayWindow>> REPLAY_HISTORY = new ConcurrentHashMap<>();
 
@@ -63,10 +65,10 @@ public final class ReceivedKeys {
         Map<Integer, ReplayWindow> history = REPLAY_HISTORY.computeIfAbsent(speaker, ignored -> new ConcurrentHashMap<>());
         synchronized (seen) {
             ReplayWindow window;
+            Integer highest = HIGHEST_EPOCH.get(speaker);
             if (seen.contains(epoch)) {
-                // A grant for an evicted epoch is a rollback. Re-adding a player is different:
-                // keep that epoch's replay window so a previously captured packet stays rejected.
-                if (!forgotten.remove(epoch)) {
+                // Re-adding a player may restore only the exact active epoch, never a retired one.
+                if (!forgotten.remove(epoch) || (highest != null && epoch != highest)) {
                     return false;
                 }
                 window = history.get(epoch);
@@ -74,12 +76,14 @@ public final class ReceivedKeys {
                     return false;
                 }
             } else {
-                if (seen.size() >= MAX_SEEN_EPOCHS_PER_SPEAKER) {
+                // Epochs are monotonic. Reject even an unseen epoch older than the newest accepted grant.
+                if ((highest != null && epoch <= highest) || seen.size() >= MAX_SEEN_EPOCHS_PER_SPEAKER) {
                     return false;
                 }
                 window = new ReplayWindow(firstCounter);
                 seen.add(epoch);
                 history.put(epoch, window);
+                HIGHEST_EPOCH.put(speaker, epoch);
             }
             ReplayWindow acceptedWindow = window;
             KEYS.compute(speaker, (id, list) -> {
@@ -117,6 +121,7 @@ public final class ReceivedKeys {
         KEYS.clear();
         MISSING.clear();
         SEEN_EPOCHS.clear();
+        HIGHEST_EPOCH.clear();
         FORGOTTEN_EPOCHS.clear();
         REPLAY_HISTORY.clear();
     }
