@@ -262,6 +262,8 @@ public final class WhitelistSelfTest {
         check(!ReceivedKeys.put(alice, 1, key, 100L), "an evicted old epoch cannot be reinstalled by replaying its grant");
         byte[] p3 = WhitelistCipher.seal(plain, key3, 3, 0L, alice);
         check(ReceivedKeys.open(alice, p3) != null, "latest epoch packet is accepted");
+        check(!ReceivedKeys.put(alice, 2, key2, 0L),
+                "an unseen but older epoch cannot roll back the latest accepted key");
         check(ReceivedKeys.open(UUID.randomUUID(), p101) == null && ReceivedKeys.open(null, p101) == null, "unknown speaker");
         ReceivedKeys.forget(alice);
         check(!ReceivedKeys.has(alice), "forget removes the active keys");
