@@ -32,6 +32,9 @@ dependencies {
 
     // Simple Voice Chat (not bundled, only used for compiling and for ./gradlew runClient)
     implementation "${project.voicechat_dependency}"
+
+    // Optional integration: compile against Mod Menu without requiring it at runtime.
+    modCompileOnly "maven.modrinth:modmenu:18.0.2"
 }
 
 processResources {
