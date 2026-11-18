@@ -14,7 +14,7 @@ The mod runs **on the client only**. The server only needs Simple Voice Chat, ju
 
 ## Usage
 
-Everything is set in the game. You never need a command or the config file. You can open the settings from Mod Menu or assign the optional settings hotkey under Options → Controls → Key Binds (category: Voice Chat E2EE).
+Everything is set in the game. You never need a command or the config file. You can open the settings from Mod Menu or assign the optional hotkeys under Options → Controls → Key Binds (category: Voice Chat E2EE). All shortcuts are unbound by default.
 
 1. Put the jar in the `mods` folder and start Minecraft. On the first start a random key is created for you.
 2. Open the Simple Voice Chat window (default key `V`). Next to it there is a small panel with two buttons:
@@ -28,6 +28,19 @@ Everything is set in the game. You never need a command or the config file. You 
 5. Comparison: the settings show a key code (e.g. `A1B2-C3D4`). Same code means same key.
 
 Anyone who does not have the key cannot hear you, and you cannot hear them (default).
+
+### Keyboard shortcuts
+
+All shortcuts are configurable under **Options → Controls → Key Binds → Voice Chat E2EE** and are unbound by default:
+
+| Shortcut | Action |
+| --- | --- |
+| Open Voice Chat E2EE settings | Opens the main settings screen |
+| Toggle encryption | Turns outgoing encryption on or off; opens settings if a shared-key mode has no key |
+| Open whitelist | Opens the whitelist management screen |
+| Rotate whitelist voice key | Creates a fresh outgoing whitelist key and refreshes grants; only available in whitelist mode |
+| Resend whitelist keys | Queues current key grants again; only available in whitelist mode |
+| Show encryption status | Prints encryption, mode and strict-hearing status in chat |
 
 ### The settings window
 
