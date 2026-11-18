@@ -15,7 +15,9 @@ import voicechate2ee.whitelist.WhitelistService;
 import voicechate2ee.whitelist.WhitelistState;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.UUID;
 
 /**
@@ -30,6 +32,8 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
     private static final int MARGIN = 10;
     private static final int ROWS_PER_PAGE = 5;
     private static final int ROW_HEIGHT = 17;
+    private static final int DROPDOWN_ROWS = 5;
+    private static final int DROPDOWN_ROW_HEIGHT = 18;
 
     private static final int COLOR_GOOD = 0xFF1E7B1E;
     private static final int COLOR_WARN = 0xFFAA2222;
@@ -46,8 +50,13 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
     private Button resend;
     private Button done;
     private final Button[] removeButtons = new Button[ROWS_PER_PAGE];
+    private final Button[] playerSuggestions = new Button[DROPDOWN_ROWS];
+    private Button dropdownPrevious;
+    private Button dropdownNext;
 
     private int page;
+    private int dropdownPage;
+    private boolean dropdownOpen;
     private String status = "Add an online player by name.";
     private int statusColor = COLOR_NORMAL;
 
@@ -68,14 +77,43 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
                 .bounds(left, guiTop + 22, fullWidth, 20).build();
         addRenderableWidget(mode);
 
-        playerName = new EditBox(font, left, guiTop + 65, fullWidth - 84, 20, Component.literal("Player name"));
+        playerName = new EditBox(font, left, guiTop + 65, fullWidth - 84, 20, Component.literal("Player name")) {
+            @Override
+            public void setFocused(boolean focused) {
+                super.setFocused(focused);
+                if (focused) {
+                    dropdownOpen = true;
+                    dropdownPage = 0;
+                    refreshDropdown();
+                } else {
+                    dropdownOpen = false;
+                }
+            }
+        };
         playerName.setMaxLength(16);
-        playerName.setHint(Component.literal("Online player name"));
+        playerName.setHint(Component.literal("Click to select an online player, or type to filter"));
         addRenderableWidget(playerName);
 
         add = Button.builder(Component.literal("Add player"), button -> addPlayer())
                 .bounds(left + fullWidth - 80, guiTop + 65, 80, 20).build();
         addRenderableWidget(add);
+
+        for (int i = 0; i < DROPDOWN_ROWS; i++) {
+            final int suggestionIndex = i;
+            Button suggestion = Button.builder(Component.empty(), button -> selectPlayerSuggestion(suggestionIndex))
+                    .bounds(left, guiTop + 87 + i * DROPDOWN_ROW_HEIGHT, fullWidth - 4, DROPDOWN_ROW_HEIGHT).build();
+            suggestion.visible = false;
+            playerSuggestions[i] = suggestion;
+            addRenderableWidget(suggestion);
+        }
+        dropdownPrevious = Button.builder(Component.literal("<"), button -> changeDropdownPage(-1))
+                .bounds(left, guiTop + 87 + DROPDOWN_ROWS * DROPDOWN_ROW_HEIGHT, 24, 16).build();
+        dropdownNext = Button.builder(Component.literal(">"), button -> changeDropdownPage(1))
+                .bounds(left + fullWidth - 28, guiTop + 87 + DROPDOWN_ROWS * DROPDOWN_ROW_HEIGHT, 24, 16).build();
+        dropdownPrevious.visible = false;
+        dropdownNext.visible = false;
+        addRenderableWidget(dropdownPrevious);
+        addRenderableWidget(dropdownNext);
 
         List<WhitelistState.Entry> entries = WhitelistState.entries();
         int pages = pageCount(entries.size());
@@ -129,6 +167,71 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
         previous.active = page > 0;
         next.active = page + 1 < pageCount(entries.size());
         resend.active = !entries.isEmpty() && WhitelistState.isWhitelistMode() && E2EEState.snapshot().enabled();
+        refreshDropdown();
+    }
+
+    private List<PlayerInfo> filteredOnlinePlayers() {
+        ClientPacketListener connection = minecraft == null ? null : minecraft.getConnection();
+        if (connection == null) {
+            return List.of();
+        }
+        String filter = playerName == null ? "" : playerName.getValue().trim().toLowerCase(Locale.ROOT);
+        UUID self = minecraft.getUser().getProfileId();
+        List<PlayerInfo> matches = new ArrayList<>();
+        for (PlayerInfo info : connection.getOnlinePlayers()) {
+            if (info.getProfile().id().equals(self)) {
+                continue;
+            }
+            String name = info.getProfile().name();
+            if (filter.isEmpty() || name.toLowerCase(Locale.ROOT).contains(filter)) {
+                matches.add(info);
+            }
+        }
+        matches.sort((a, b) -> a.getProfile().name().compareToIgnoreCase(b.getProfile().name()));
+        return matches;
+    }
+
+    private void refreshDropdown() {
+        if (playerName == null || playerSuggestions[0] == null) {
+            return;
+        }
+        List<PlayerInfo> matches = filteredOnlinePlayers();
+        int pages = Math.max(1, (matches.size() + DROPDOWN_ROWS - 1) / DROPDOWN_ROWS);
+        dropdownPage = Math.max(0, Math.min(dropdownPage, pages - 1));
+        int start = dropdownPage * DROPDOWN_ROWS;
+        for (int i = 0; i < DROPDOWN_ROWS; i++) {
+            int index = start + i;
+            Button suggestion = playerSuggestions[i];
+            boolean visible = dropdownOpen && index < matches.size();
+            suggestion.visible = visible;
+            suggestion.active = visible;
+            if (visible) {
+                PlayerInfo info = matches.get(index);
+                suggestion.setMessage(Component.literal(info.getProfile().name()));
+            }
+        }
+        boolean multiplePages = dropdownOpen && pages > 1;
+        dropdownPrevious.visible = multiplePages;
+        dropdownNext.visible = multiplePages;
+        dropdownPrevious.active = multiplePages && dropdownPage > 0;
+        dropdownNext.active = multiplePages && dropdownPage + 1 < pages;
+    }
+
+    private void selectPlayerSuggestion(int row) {
+        List<PlayerInfo> matches = filteredOnlinePlayers();
+        int index = dropdownPage * DROPDOWN_ROWS + row;
+        if (index < 0 || index >= matches.size()) {
+            return;
+        }
+        playerName.setValue(matches.get(index).getProfile().name());
+        dropdownOpen = false;
+        playerName.setFocused(false);
+        refresh();
+    }
+
+    private void changeDropdownPage(int delta) {
+        dropdownPage += delta;
+        refreshDropdown();
     }
 
     private void toggleMode() {
@@ -230,6 +333,17 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
     }
 
     @Override
+    public boolean charTyped(net.minecraft.client.input.CharacterEvent characterEvent) {
+        boolean handled = super.charTyped(characterEvent);
+        if (handled && playerName.isFocused()) {
+            dropdownOpen = true;
+            dropdownPage = 0;
+            refreshDropdown();
+        }
+        return handled;
+    }
+
+    @Override
     public boolean keyPressed(net.minecraft.client.input.KeyEvent keyEvent) {
         if (keyEvent.isEscape()) {
             close();
@@ -252,6 +366,10 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
         guiGraphics.text(font, Component.literal("Select who may hear your encrypted voice."), guiLeft + MARGIN,
                 guiTop + 46, FONT_COLOR, false);
         guiGraphics.text(font, Component.literal("WHITELIST"), guiLeft + MARGIN, guiTop + 91, FONT_COLOR, false);
+        if (dropdownOpen && filteredOnlinePlayers().isEmpty()) {
+            guiGraphics.text(font, Component.literal("No matching online players."),
+                    guiLeft + MARGIN, guiTop + 91, COLOR_WARN, false);
+        }
 
         List<WhitelistState.Entry> entries = WhitelistState.entries();
         int start = page * ROWS_PER_PAGE;
