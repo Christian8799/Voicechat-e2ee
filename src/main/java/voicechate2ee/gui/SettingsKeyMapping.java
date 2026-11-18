@@ -20,8 +20,7 @@ public final class SettingsKeyMapping {
     public static void register() {
         openSettings = KeyMappingHelper.registerKeyMapping(new KeyMapping(
                 "key.voicechat_e2ee.open_settings",
-                InputConstants.Type.KEYBOARD,
-                InputConstants.UNKNOWN.getValue(),
+                InputConstants.UNKNOWN,
                 CATEGORY
         ));
 
