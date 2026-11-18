@@ -34,7 +34,7 @@ dependencies {
     implementation "${project.voicechat_dependency}"
 
     // Optional integration: compile against Mod Menu without requiring it at runtime.
-    modCompileOnly "maven.modrinth:modmenu:21.0.1"
+    modImplementation "maven.modrinth:modmenu:21.0.1"
 }
 
 processResources {
