@@ -1,4 +1,9 @@
 {
   "key.category.voicechat_e2ee.general": "Voice Chat E2EE",
-  "key.voicechat_e2ee.open_settings": "Voice-Chat-E2EE-Einstellungen öffnen"
+  "key.voicechat_e2ee.open_settings": "Voice-Chat-E2EE-Einstellungen öffnen",
+  "key.voicechat_e2ee.toggle_encryption": "Verschlüsselung umschalten",
+  "key.voicechat_e2ee.open_whitelist": "Whitelist öffnen",
+  "key.voicechat_e2ee.rotate_key": "Whitelist-Sprachschlüssel erneuern",
+  "key.voicechat_e2ee.resend_keys": "Whitelist-Schlüssel erneut senden",
+  "key.voicechat_e2ee.toggle_status": "Verschlüsselungsstatus anzeigen"
 }

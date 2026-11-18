@@ -110,6 +110,16 @@ public final class WhitelistService {
         scanNow = true;
     }
 
+    /** Rotates our outgoing whitelist voice key and invalidates queued grants for the old epoch. */
+    public void rotateOwnKey() {
+        OwnVoiceKey.rotate();
+        outbox.removeIf(item -> item.grant());
+        granted.clear();
+        grantQueuedAt.clear();
+        grantFailedAt.clear();
+        scanNow = true;
+    }
+
     /** Sends your key to everybody on the whitelist again. */
     public void resend() {
         outbox.removeIf(item -> item.grant());
