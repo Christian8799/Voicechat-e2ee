@@ -14,7 +14,7 @@ The mod runs **on the client only**. The server only needs Simple Voice Chat, ju
 
 ## Usage
 
-Everything is set in the game. You never need a command or the config file.
+Everything is set in the game. You never need a command or the config file. You can open the settings from Mod Menu or assign the optional settings hotkey under Options → Controls → Key Binds (category: Voice Chat E2EE).
 
 1. Put the jar in the `mods` folder and start Minecraft. On the first start a random key is created for you.
 2. Open the Simple Voice Chat window (default key `V`). Next to it there is a small panel with two buttons:
@@ -30,6 +30,8 @@ Everything is set in the game. You never need a command or the config file.
 Anyone who does not have the key cannot hear you, and you cannot hear them (default).
 
 ### The settings window
+
+You can open this screen in three ways: the gear button in the Simple Voice Chat window, the **Configure** button in Mod Menu, or the configurable **Open Voice Chat E2EE settings** key mapping under Options → Controls. The key mapping is unbound by default to avoid conflicts; assign any key you prefer.
 
 | Element | What it does |
 | --- | --- |

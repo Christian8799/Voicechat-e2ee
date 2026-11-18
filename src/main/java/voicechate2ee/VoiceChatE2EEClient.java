@@ -6,6 +6,7 @@ import voicechate2ee.command.KeyCommand;
 import voicechate2ee.command.WhitelistCommand;
 import voicechate2ee.config.E2EEState;
 import voicechate2ee.gui.ScreenOpener;
+import voicechate2ee.gui.SettingsKeyMapping;
 import voicechate2ee.whitelist.WhitelistService;
 import voicechate2ee.whitelist.WhitelistState;
 
@@ -21,6 +22,7 @@ public final class VoiceChatE2EEClient implements ClientModInitializer {
         WhitelistCommand.register();
         WhitelistService.register();
         ScreenOpener.register();
+        SettingsKeyMapping.register();
 
         E2EEState.Snapshot s = E2EEState.snapshot();
         LOG.log(System.Logger.Level.INFO, "Voice Chat E2EE loaded. Encryption: "
