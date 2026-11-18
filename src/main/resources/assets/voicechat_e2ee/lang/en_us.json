@@ -1,4 +1,9 @@
 {
   "key.category.voicechat_e2ee.general": "Voice Chat E2EE",
-  "key.voicechat_e2ee.open_settings": "Open Voice Chat E2EE settings"
+  "key.voicechat_e2ee.open_settings": "Open Voice Chat E2EE settings",
+  "key.voicechat_e2ee.toggle_encryption": "Toggle encryption",
+  "key.voicechat_e2ee.open_whitelist": "Open whitelist",
+  "key.voicechat_e2ee.rotate_key": "Rotate whitelist voice key",
+  "key.voicechat_e2ee.resend_keys": "Resend whitelist keys",
+  "key.voicechat_e2ee.toggle_status": "Show encryption status"
 }
