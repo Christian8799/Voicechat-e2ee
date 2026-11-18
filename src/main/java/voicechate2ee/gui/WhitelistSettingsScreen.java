@@ -98,23 +98,6 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
                 .bounds(left + fullWidth - 80, guiTop + 65, 80, 20).build();
         addRenderableWidget(add);
 
-        for (int i = 0; i < DROPDOWN_ROWS; i++) {
-            final int suggestionIndex = i;
-            Button suggestion = Button.builder(Component.empty(), button -> selectPlayerSuggestion(suggestionIndex))
-                    .bounds(left, guiTop + 87 + i * DROPDOWN_ROW_HEIGHT, fullWidth - 4, DROPDOWN_ROW_HEIGHT).build();
-            suggestion.visible = false;
-            playerSuggestions[i] = suggestion;
-            addRenderableWidget(suggestion);
-        }
-        dropdownPrevious = Button.builder(Component.literal("<"), button -> changeDropdownPage(-1))
-                .bounds(left, guiTop + 87 + DROPDOWN_ROWS * DROPDOWN_ROW_HEIGHT, 24, 16).build();
-        dropdownNext = Button.builder(Component.literal(">"), button -> changeDropdownPage(1))
-                .bounds(left + fullWidth - 28, guiTop + 87 + DROPDOWN_ROWS * DROPDOWN_ROW_HEIGHT, 24, 16).build();
-        dropdownPrevious.visible = false;
-        dropdownNext.visible = false;
-        addRenderableWidget(dropdownPrevious);
-        addRenderableWidget(dropdownNext);
-
         List<WhitelistState.Entry> entries = WhitelistState.entries();
         int pages = pageCount(entries.size());
         page = Math.max(0, Math.min(page, pages - 1));
@@ -146,6 +129,23 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
         done = Button.builder(Component.literal("Done"), button -> close())
                 .bounds(left + half + 4, guiTop + 226, fullWidth - half - 4, 20).build();
         addRenderableWidget(done);
+
+        for (int i = 0; i < DROPDOWN_ROWS; i++) {
+            final int suggestionIndex = i;
+            Button suggestion = Button.builder(Component.empty(), button -> selectPlayerSuggestion(suggestionIndex))
+                    .bounds(left, guiTop + 87 + i * DROPDOWN_ROW_HEIGHT, fullWidth - 4, DROPDOWN_ROW_HEIGHT).build();
+            suggestion.visible = false;
+            playerSuggestions[i] = suggestion;
+            addRenderableWidget(suggestion);
+        }
+        dropdownPrevious = Button.builder(Component.literal("<"), button -> changeDropdownPage(-1))
+                .bounds(left, guiTop + 87 + DROPDOWN_ROWS * DROPDOWN_ROW_HEIGHT, 24, 16).build();
+        dropdownNext = Button.builder(Component.literal(">"), button -> changeDropdownPage(1))
+                .bounds(left + fullWidth - 28, guiTop + 87 + DROPDOWN_ROWS * DROPDOWN_ROW_HEIGHT, 24, 16).build();
+        dropdownPrevious.visible = false;
+        dropdownNext.visible = false;
+        addRenderableWidget(dropdownPrevious);
+        addRenderableWidget(dropdownNext);
 
         refresh();
     }
@@ -330,17 +330,6 @@ public final class WhitelistSettingsScreen extends VoiceChatScreenBase {
     public void tick() {
         super.tick();
         refresh();
-    }
-
-    @Override
-    public boolean charTyped(net.minecraft.client.input.CharacterEvent characterEvent) {
-        boolean handled = super.charTyped(characterEvent);
-        if (handled && playerName.isFocused()) {
-            dropdownOpen = true;
-            dropdownPage = 0;
-            refreshDropdown();
-        }
-        return handled;
     }
 
     @Override
