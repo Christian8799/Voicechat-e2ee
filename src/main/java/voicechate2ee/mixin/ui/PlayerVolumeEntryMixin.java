@@ -30,6 +30,11 @@ public abstract class PlayerVolumeEntryMixin {
         // Dimension from VolumeEntry.SKIN_SIZE (deliberately local: mixin classes should not have fields that are named like those of the target class)
         final int skinSize = 24;
         int badgeSize = IncognitoIcon.GRID * 2;
-        EncryptionBadges.Badge badge = EncryptionBadges.badge(state.getUuid());\n        if (badge == EncryptionBadges.Badge.VERIFIED) {\n            IncognitoIcon.draw(guiGraphics, skinX + skinSize - badgeSize, skinY + skinSize - badgeSize, badgeSize);\n        } else if (badge == EncryptionBadges.Badge.DETECTED) {\n            IncognitoIcon.drawDetected(guiGraphics, skinX + skinSize - badgeSize, skinY + skinSize - badgeSize, badgeSize);\n        }
+        EncryptionBadges.Badge badge = EncryptionBadges.badge(state.getUuid());
+        if (badge == EncryptionBadges.Badge.VERIFIED) {
+            IncognitoIcon.draw(guiGraphics, skinX + skinSize - badgeSize, skinY + skinSize - badgeSize, badgeSize);
+        } else if (badge == EncryptionBadges.Badge.DETECTED) {
+            IncognitoIcon.drawDetected(guiGraphics, skinX + skinSize - badgeSize, skinY + skinSize - badgeSize, badgeSize);
+        }
     }
 }
