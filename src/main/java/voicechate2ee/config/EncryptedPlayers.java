@@ -66,6 +66,18 @@ public final class EncryptedPlayers {
         }
     }
 
+    /** Detected a structurally valid E2EE packet envelope that could not be decrypted locally. */
+    public static void markDetectedEncrypted(UUID player) {
+        if (player != null) {
+            DETECTED_ENCRYPTED.add(player);
+            VERIFIED.remove(player);
+        }
+    }
+
+    public static boolean isDetectedEncrypted(UUID player) {
+        return player != null && DETECTED_ENCRYPTED.contains(player);
+    }
+
     /**
      * Is this player last heard speaking encrypted: with the key that currently has the key code
      * {@code currentKeyCode} (may be {@code null} without a shared key), or with a voice key from the whitelist?
