@@ -6,10 +6,10 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Remembers which players speak encrypted with <b>your</b> key. The receive path adds a player as soon as a
+ * Remembers verified encrypted speakers and structurally detected encrypted envelopes. The receive path adds a player as soon as a
  * packet from them has been decrypted successfully, and removes them again as soon as a packet arrives from
  * them that is not readable with your key (e.g. unencrypted or a different key). The UI asks this class
- * who gets the incognito icon.
+ * who gets the appropriate encryption badge.
  *
  * <p>A player only counts as encrypted while the stored key code matches your current key. If you change the
  * key, all icons disappear immediately until people speak with the new key again. The list is cleared on every
@@ -47,7 +47,7 @@ public final class EncryptedPlayers {
         }
     }
 
-    /** A packet from this player was decrypted with the key that has the key code {@code keyCode}. */
+    /** A packet from this player was authenticated/decrypted with the key that has the key code {@code keyCode}. */
     public static void markEncrypted(UUID player, String keyCode) {
         if (player == null || keyCode == null) {
             return;
