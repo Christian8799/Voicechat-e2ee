@@ -97,12 +97,19 @@ public final class DecryptingOpusDecoder implements OpusDecoder {
             }
             // 3. nothing worked: maybe a whitelisted friend whose key we lost, then we ask for it again
             if (inner == null) {
+                // Structural envelope indicates an E2EE packet, but we cannot authenticate it locally.
+                // UI must show a distinct "detected, not verified" badge.
+                if (sealed.length >= PacketCipher.MIN_LENGTH) {
+                    EncryptedPlayers.markDetectedEncrypted(speaker);
+                } else {
+                    EncryptedPlayers.markUnverified(speaker);
+                }
                 ReceivedKeys.noteUnreadable(speaker, sealed);
             }
         }
         if (inner != null) {
             EncryptedPlayers.markEncrypted(speaker, code);
-        } else {
+        } else if (sealed == null) {
             EncryptedPlayers.markUnverified(speaker);
         }
         return inner;
