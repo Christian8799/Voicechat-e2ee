@@ -55,6 +55,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           CURSEFORGE_API_TOKEN: ${{ secrets.CURSEFORGE_API_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           JAR: ${{ steps.jar.outputs.path }}
         shell: bash
