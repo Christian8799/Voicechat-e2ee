@@ -98,35 +98,18 @@ jobs:
             exit 1
           fi
 
-          # CurseForge expects game-version IDs, not arbitrary labels.
-          VERSIONS_JSON="$(curl --fail-with-body --silent --show-error \
-            -H "X-Api-Token: $CURSEFORGE_API_TOKEN" \
-            "https://minecraft.curseforge.com/api/game/versions")"
-          GAME_VERSION_IDS="$(printf '%s' "$VERSIONS_JSON" | jq -cer '
-            def findid($name): [.[] | select(.name == $name) | .id] | unique;
-            {
-              mc: findid("26.3"),
-              fabric: findid("Fabric"),
-              client: findid("Client")
-            }
-            | select((.mc|length)==1 and (.fabric|length)==1 and (.client|length)==1)
-            | [.mc[0], .fabric[0], .client[0]]
-          ')" || {
-            echo "Could not resolve required CurseForge game-version IDs." >&2
-            exit 1
-          }
-
+          # CurseForge accepts game-version names directly; this avoids fragile
+          # ID lookups where versions may be missing or duplicated.
           METADATA="$(jq -n \
             --arg displayName "Voice Chat E2EE $TAG" \
             --arg changelog "$CHANGELOG" \
             --arg releaseType "$RELEASE_TYPE" \
-            --argjson gameVersions "$GAME_VERSION_IDS" \
             '{
               displayName: $displayName,
               changelog: $changelog,
               changelogType: "markdown",
               releaseType: $releaseType,
-              gameVersions: $gameVersions
+              gameVersionNames: ["26.3", "Fabric", "Client"]
             }')"
 
           RESPONSE="$(curl --fail-with-body --silent --show-error \
