@@ -55,7 +55,7 @@ public final class EncryptedPlayers {
         if (!keyCode.equals(VERIFIED.get(player))) {
             VERIFIED.put(player, keyCode);
         DETECTED_ENCRYPTED.add(player);
-        }
+    }
     }
 
     /** A packet from this player is not readable with your key (unencrypted or a different key). */
@@ -81,5 +81,6 @@ public final class EncryptedPlayers {
     /** Forgets all players. */
     public static void clear() {
         VERIFIED.clear();
+        DETECTED_ENCRYPTED.clear();
     }
 }
