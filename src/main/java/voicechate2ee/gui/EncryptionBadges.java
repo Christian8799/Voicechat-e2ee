@@ -23,17 +23,17 @@ public final class EncryptionBadges {
      * Without your own key, only players heard through the whitelist get an icon, because nobody else can be
      * recognized as "encrypted with my key".
      */
-    public static boolean isEncrypted(UUID player) {
+    public enum Badge { NONE, VERIFIED, DETECTED }\n\n    public static Badge badge(UUID player) {
         if (player == null) {
-            return false;
+            return Badge.NONE;
         }
         E2EEState.Snapshot state = E2EEState.snapshot();
         VoiceKey key = state.key();
         // New voice chat connection: clear the list (see EncryptedPlayers)
         EncryptedPlayers.bindSession(ClientManager.getClient());
         if (player.equals(ClientManager.getPlayerStateManager().getOwnID())) {
-            return SettingsModel.isSendingEncrypted(state);
+            return SettingsModel.isSendingEncrypted(state) ? Badge.VERIFIED : Badge.NONE;
         }
-        return EncryptedPlayers.isEncrypted(player, key == null ? null : key.fingerprint());
+        if (EncryptedPlayers.isEncrypted(player, key == null ? null : key.fingerprint())) return Badge.VERIFIED;\n        return EncryptedPlayers.isDetectedEncrypted(player) ? Badge.DETECTED : Badge.NONE;
     }
 }
