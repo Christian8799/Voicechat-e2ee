@@ -20,6 +20,8 @@ public final class IncognitoIcon {
     private static final int CHIP_OFF = 0xFF454545;
     private static final int WHITE_OFF = 0xFFAFAFAF;
     private static final int SLASH = 0xFFE5322D;
+    private static final int DETECTED = 0xFFFFC04A;
+    private static final int DETECTED_BG = 0xFF352819;
     private static final int SLASH_OUTLINE = 0xFF3A0A0A;
 
     /** {@code T} = transparent, {@code #} = dark background, {@code W} = white (hat and glasses lenses). */
@@ -32,6 +34,28 @@ public final class IncognitoIcon {
             "#WW#WW#",
             "T#####T",
     };
+
+    /** Distinct amber variant for E2EE envelopes detected but not locally decryptable/authenticated. */
+    public static void drawDetected(GuiGraphicsExtractor guiGraphics, float x, float y, float size) {
+        guiGraphics.pose().pushMatrix();
+        guiGraphics.pose().translate(x, y);
+        guiGraphics.pose().scale(size / GRID, size / GRID);
+        for (int row = 0; row < GRID; row++) {
+            String line = BITMAP[row];
+            for (int col = 0; col < GRID; col++) {
+                char c = line.charAt(col);
+                if (c != 'T') {
+                    guiGraphics.fill(col, row, col + 1, row + 1, c == 'W' ? DETECTED : DETECTED_BG);
+                }
+            }
+        }
+        // Amber question mark-like pixel mark differentiates detected/unverified state.
+        guiGraphics.fill(5, 0, 6, 2, DETECTED);
+        guiGraphics.fill(4, 2, 6, 3, DETECTED);
+        guiGraphics.fill(5, 3, 6, 5, DETECTED);
+        guiGraphics.fill(5, 6, 6, 7, DETECTED);
+        guiGraphics.pose().popMatrix();
+    }
 
     private IncognitoIcon() {
     }
