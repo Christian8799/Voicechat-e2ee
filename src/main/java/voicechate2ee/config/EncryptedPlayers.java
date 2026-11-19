@@ -24,6 +24,7 @@ public final class EncryptedPlayers {
     public static final String WHITELIST_CODE = "whitelist";
 
     private static final Map<UUID, String> VERIFIED = new ConcurrentHashMap<>();
+    private static final java.util.Set<UUID> DETECTED_ENCRYPTED = ConcurrentHashMap.newKeySet();
     private static volatile WeakReference<Object> session = new WeakReference<>(null);
 
     private EncryptedPlayers() {
@@ -41,6 +42,7 @@ public final class EncryptedPlayers {
             if (session.get() != token) {
                 session = new WeakReference<>(token);
                 VERIFIED.clear();
+                DETECTED_ENCRYPTED.clear();
             }
         }
     }
@@ -52,6 +54,7 @@ public final class EncryptedPlayers {
         }
         if (!keyCode.equals(VERIFIED.get(player))) {
             VERIFIED.put(player, keyCode);
+        DETECTED_ENCRYPTED.add(player);
         }
     }
 
@@ -59,6 +62,7 @@ public final class EncryptedPlayers {
     public static void markUnverified(UUID player) {
         if (player != null) {
             VERIFIED.remove(player);
+            DETECTED_ENCRYPTED.remove(player);
         }
     }
 
