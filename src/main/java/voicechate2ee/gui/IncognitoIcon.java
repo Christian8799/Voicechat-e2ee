@@ -20,7 +20,9 @@ public final class IncognitoIcon {
     private static final int CHIP_OFF = 0xFF454545;
     private static final int WHITE_OFF = 0xFFAFAFAF;
     private static final int SLASH = 0xFFE5322D;
-    private static final int DETECTED = 0xFFFFC04A;\n    private static final int DETECTED_BG = 0xFF352819;\n    private static final int SLASH_OUTLINE = 0xFF3A0A0A;
+    private static final int DETECTED = 0xFFFFC04A;
+    private static final int DETECTED_BG = 0xFF352819;
+    private static final int SLASH_OUTLINE = 0xFF3A0A0A;
 
     /** {@code T} = transparent, {@code #} = dark background, {@code W} = white (hat and glasses lenses). */
     private static final String[] BITMAP = {
