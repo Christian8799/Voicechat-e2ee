@@ -244,3 +244,12 @@ players, and the logic behind the settings window and the quick toggle, all with
 `WhitelistSelfTest.java` (called by `SelfTest`) covers the whitelist: the chat encoding, the key grants with real
 RSA keys (forgery, wrong recipient, tampering), packet encryption, replay protection, the whitelist file, and the
 whole voice path from encoder to decoder including removing a player.
+
+### Encryption badges
+
+In the Simple Voice Chat player list, the mod distinguishes:
+
+- **Normal incognito badge:** a packet was authenticated and decrypted using a compatible shared key or a received whitelist voice key.
+- **Amber variant:** an E2EE-shaped Opus envelope was detected, but this client could not decrypt/authenticate it (for example, the sender has not whitelisted you or uses a different shared key). This is detection, not cryptographic verification; a malformed or spoofed envelope could cause a false positive.
+
+The badge is based on the most recently observed voice packet and resets when the voice-chat session changes.
